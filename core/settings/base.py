@@ -8,7 +8,7 @@ import sys
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Decouple will automatically find and load the .env file.
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 #config('SECRET_KEY')
 if not SECRET_KEY:
     # Fallback for dev or a clear error if not set
