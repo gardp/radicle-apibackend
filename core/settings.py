@@ -8,8 +8,8 @@ import sys
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Decouple will automatically find and load the .env file.
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = config('DJANGO_SECRET_KEY')
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='127.0.0.1').split(',')
 

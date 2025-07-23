@@ -17,3 +17,7 @@ __pycache__/
 # IDEs and Editors
 .idea/
 .vscode/
+
+#the original settins.py
+settings.py
+settings.py.example
