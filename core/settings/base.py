@@ -17,8 +17,8 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True' # Default to False if not set
 # DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1').split(',')
-# ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1').split(',')
+ALLOWED_HOSTS = ['radiclesound.com', 'www.radiclesound.com', 'api.radiclesound.com', '45.55.47.150', 'localhost']
 
 # Media files (user-uploaded files)
 MEDIA_URL = '/media/'
