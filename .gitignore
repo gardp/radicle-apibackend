@@ -12,6 +12,7 @@ media/
 __pycache__/
 *.pyc
 *.log
+logs/
 .DS_Store
 
 # IDEs and Editors
