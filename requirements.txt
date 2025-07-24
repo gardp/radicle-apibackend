@@ -18,6 +18,11 @@ psycopg2-binary==2.9.10
 dj-database-url==3.0.1
 whitenoise==6.9.0
 setuptools==80.9.0
+pillow==11.3.0
+pyjwt==2.10.1
+python-decouple==3.8
+
+
 
 
 
