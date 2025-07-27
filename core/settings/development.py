@@ -26,9 +26,9 @@ DATABASES = {
 # Django's dev server handles it from app static folders + STATICFILES_DIRS
 # Add your app's 'static' directories if you haven't already in base.py
 # For development, you might need STATICFILES_DIRS if you have project-level static files:
-STATICFILES_DIRS = [
-    BASE_DIR / 'static_dev', # Example for project-level static files in dev
-]
+# STATICFILES_DIRS = [
+#     BASE_DIR / 'static_dev', # Example for project-level static files in dev
+# ]
 
 # Console email backend for dev
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
