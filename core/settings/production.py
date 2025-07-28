@@ -62,6 +62,16 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
+# Security settings - CRITICAL FOR HTTPS
+# These should already be True if you're using the standard production.py setup
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') # <-- ADD/UNCOMMENT THIS
+SECURE_SSL_REDIRECT = True # Ensure this is True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000 # HSTS is important, usually 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True # Apply for preloading if you want to submit your domain
+
 # Logging (more robust setup for production)
 LOGGING = {
     'version': 1,
