@@ -10,17 +10,6 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == ['']:
     raise ImproperlyConfigured("ALLOWED_HOSTS environment variable not set or empty.")
 
-# Database settings for PostgreSQL (will get details from environment variables)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DATABASE_NAME'),
-        'USER': os.environ.get('DATABASE_USER'),
-        'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
-        'HOST': os.environ.get('DATABASE_HOST'),
-        'PORT': os.environ.get('DATABASE_PORT', 5432), # Default PostgreSQL port
-    }
-}   
 
 # STATIC FILES (Served by WhiteNoise via Django)
 # STATIC_ROOT is where collectstatic will put all static files.
