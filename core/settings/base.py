@@ -5,8 +5,8 @@ import os
 import sys 
 import dj_database_url
 
-
-BASE_DIR = Path(__file__).resolve().parent.parent
+# since the settings.py is in the core folder, we need to go up one level to get the base directory
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Decouple will automatically find and load the .env file.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
