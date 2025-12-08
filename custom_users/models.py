@@ -1,42 +1,60 @@
-# custom_users/models.py (Example structure)
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from common.models import Contact
+
 
 class CustomUser(AbstractUser):
-    # Add any other custom fields here
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    bio = models.TextField(blank=True, null=True)
-    # Add related_name to avoid clashes with auth.User
+    """Custom user model extending Django's AbstractUser."""
+    # This is the central user model for your project.
     groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_set', # Choose a unique related_name
-        blank=True,
-        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
-        related_query_name='custom_user',
+        Group,
+        # ...
+        related_name="custom_user_set" # We give it a unique name!
     )
     user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_permissions_set', # Choose another unique related_name
-        blank=True,
-        help_text='Specific permissions for this user.',
-        related_query_name='custom_user',
+        Permission,
+        # ...
+        related_name="custom_user_permissions_set" # And another unique name!
     )
 
+
 class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
-    location = models.CharField(max_length=100, blank=True, null=True)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    # Add other profile-specific fields
+    """Model to store additional information for a user."""
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    contact = models.OneToOneField( 
+        Contact,
+        on_delete=models.SET_NULL,  # if contact is deleted, set the user profile to null; dont delete the user profile
+        related_name='user_profile',
+        help_text="Contact information for the user.",
+        null=True,
+        blank=True
+    )
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username}'s profile"
+        return f"{self.user.username}'s Profile"
 
-# Optional: Signal to create UserProfile automatically for new CustomUser
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
 
-# @receiver(post_save, sender=CustomUser)
-# def create_or_update_user_profile(sender, instance, created, **kwargs):
-#     if created:
-#         UserProfile.objects.create(user=instance)
-#     instance.profile.save() # Ensure profile is always saved if it exists
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_profile_and_contact(sender, instance, created, **kwargs):
+    """
+    Signal to create a UserProfile and a corresponding Contact
+    automatically when a new user is created.
+    """
+    if created:
+        # Use get_or_create to prevent race conditions or duplicate signals
+        contact = Contact(
+            email=instance.email,
+            contact_type=Contact.ContactType.INDIVIDUAL,
+        )
+        contact.full_clean()  # Validate before saving
+        contact.save()
+        # Link the profile to the user and the contact
+        UserProfile.objects.create(user=instance, contact=contact)

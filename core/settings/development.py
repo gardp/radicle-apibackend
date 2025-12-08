@@ -31,7 +31,10 @@ DATABASES = {
 # ]
 
 # Console email backend for dev
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# OR: explicitly use SMTP in dev too
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 # Optional: Django Debug Toolbar settings if you use it
 # INSTALLED_APPS += ['debug_toolbar']

@@ -5,18 +5,22 @@ import os
 import sys 
 import dj_database_url
 
+
 # since the settings.py is in the core folder, we need to go up one level to get the base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Decouple will automatically find and load the .env file.
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
+
 #config('SECRET_KEY')
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="insecure-dev-key")
 if not SECRET_KEY:
     # Fallback for dev or a clear error if not set
-    print("Warning: DJANGO_SECRET_KEY not set. Using a dummy key for development.")
     SECRET_KEY = 'a-very-insecure-default-key-for-dev-only!' # DO NOT USE IN PRODUCTION
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True' # Default to False if not set
-# DEBUG = config('DEBUG', default=False, cast=bool)
+
+# Decouple will automatically find and load the .env file.
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
+DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = []
 
@@ -42,8 +46,9 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'custom_users.apps.CustomUsersConfig',
     'music.apps.MusicConfig',
-    'payments.apps.PaymentsConfig',
+    'transactions.apps.TransactionsConfig',
     'licenses.apps.LicensesConfig',
+    'common.apps.CommonConfig',
 ]
 
 MIDDLEWARE = [
@@ -74,6 +79,15 @@ TEMPLATES = [
         },
     },
 ]
+
+# Email settings to send license contracts
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
@@ -108,6 +122,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'static_files'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'custom_users.CustomUser'
+
 # Media files (user-uploaded)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media' # This will be unused if using Spaces, but good to define
@@ -135,6 +153,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'idempotency-key',
 ]
 
 # If you need to allow credentials (e.g., cookies, although JWT usually doesn't need them directly for access token)
@@ -195,15 +214,13 @@ SIMPLE_JWT = {
     "TOKEN_SLIDING_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
 
-if 'test' in sys.argv:
-    print("========== DATABASE CONNECTION SETTINGS ==========")
-    print(f"DB_NAME: {config('DB_NAME')}")
-    print(f"DB_USER: {config('DB_USER')}")
-    print(f"DB_HOST: {config('DB_HOST')}")
-    print(f"DB_PORT: {config('DB_PORT')}")
-    # Don't print the actual password for security
-    print("DB_PASSWORD: [hidden]")
-    print("==================================================")
+if 'test' in sys.argv or 'test_coverage' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # You can optionally add this to settings.py to customize test database name
 TEST = {
