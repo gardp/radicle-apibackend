@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .footer { text-align: center; padding: 20px; color: #6c757d; }
+        .button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thank You for Your Purchase!</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ order.buyer.contact.first_name }},</p>
+            
+            <p>Your order ({{ order.reference_number }}) has been successfully processed.</p>
+            
+            <h3>Order Details:</h3>
+            <ul>
+            {% for item in order.items.all %}
+                <li>{{ item.purchased_item.title }} - {{ item.license_type.license_type_name }}</li>
+            {% endfor %}
+            </ul>
+            
+            <p>Total Amount: {{ order.total_amount }} {{ payment.currency }}</p>
+            
+            <p>You can download your purchases here:</p>
+            <p><a href="{{ download_url }}" class="button">Download Files</a></p>
+            
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+        </div>
+        <div class="footer">
+            <p>© {% now "Y" %} Your Company. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

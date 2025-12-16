@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericRelation
 from common.models import Address
-
+from decimal import Decimal
 
 class Buyer(models.Model):
     """A buyer of a track"""
@@ -34,11 +34,31 @@ class Order(models.Model):
     buyer = models.ForeignKey(Buyer, on_delete=models.PROTECT, related_name='orders',
                               help_text="The buyer who placed the order.")
     
-    status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.COMPLETED)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.PENDING)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # tax fields
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('8.50'))  # e.g., 8.50 for 8.50%
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default="usd")
+
+    def calculate_totals(self):
+        """Calculate tax and total based on subtotal and tax rate"""
+        self.tax_amount = self.subtotal * (self.tax_rate / Decimal('100'))
+        self.total_amount = self.subtotal + self.tax_amount
+        self.save()  # Save the calculated values
+        return self.total_amount
+
+    def save(self, *args, **kwargs):
+        # Ensure totals are calculated before saving
+        if self.subtotal and self.tax_rate:
+            self.tax_amount = self.subtotal * (self.tax_rate / Decimal('100'))
+            self.total_amount = self.subtotal + self.tax_amount
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order {self.order_id} by {self.buyer.buyer_id}"
@@ -58,6 +78,7 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2,
                                 help_text="Price of the item at the time of purchase.")
+    currency = models.CharField(max_length=3, default="usd")
 
     def __str__(self):
         return f"{self.quantity}x of {self.purchased_item} in Order {self.order.order_id}"
@@ -66,22 +87,26 @@ class OrderItem(models.Model):
 class PaymentStatus(models.TextChoices): #it's reused in Receipt
     SUCCESS = 'SUCCESS', 'Success'
     FAILED = 'FAILED', 'Failed'
+    PENDING = 'PENDING', 'Pending'
 class Payment(models.Model):
     """A payment for an order"""
+    PROVIDER_CHOICES = [
+        ('stripe', 'Stripe'),
+        ('paypal', 'PayPal'),
+    ]
     payment_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
-    
-    amount = models.DecimalField(max_digits=10, decimal_places=2) #it's the total payment amount of the order
-    status = models.CharField(max_length=10, choices=PaymentStatus.choices)
-    
+    provider = models.CharField(max_length=10, choices=PROVIDER_CHOICES)
     # Store the transaction ID from your payment gateway (e.g., Stripe's charge ID)
-    processor = models.CharField(max_length=50, default='PayPal')
-    transaction_id = models.CharField(max_length=25, unique=True)
-    
-    processing_date = models.DateTimeField(auto_now_add=True)
+    provider_payment_id = models.CharField(max_length=255)  # Stripe/PayPal payment intent ID
+    amount = models.DecimalField(max_digits=10, decimal_places=2) #it's the total payment amount of the order
+    currency = models.CharField(max_length=3, default="usd")
+    status = models.CharField(max_length=10, choices=PaymentStatus.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Payment {self.transaction_id} for Order {self.order.order_id}"
+        return f"Payment {self. transaction_id} for Order {self.order.order_id}"
 
 #### Remove receipt and add the receipt file to the payment model
 class Receipt(models.Model):

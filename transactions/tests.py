@@ -2,7 +2,7 @@ from django.test.utils import isolate_apps
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from .models import Buyer, Order, OrderItem, Payment, Receipt
+from .models import Buyer, Order, OrderItem, Payment, Receipt, PaymentStatus
 from common.models import Contact
 from licenses.models import License
 from music.models import Track
@@ -90,7 +90,7 @@ class PaymentTest(APITestCase):
         self.contact = Contact.objects.create(first_name='Buyer', last_name='Buyer')
         self.buyer = Buyer.objects.create(contact=self.contact)
         self.order = Order.objects.create(buyer=self.buyer, reference_number='123456', total_amount=100.00)
-        self.payment = Payment.objects.create(order=self.order, amount=100.00, status='SUCCESS', processor='PayPal', transaction_id='123456')
+        self.payment = Payment.objects.create(order=self.order, amount=100.00, status=PaymentStatus.SUCCESS, provider='PayPal', provider_payment_id='123456')
 
     def test_list_payments(self):
         url = reverse('payments-list')
@@ -119,7 +119,7 @@ class ReceiptTest(APITestCase):
         self.contact = Contact.objects.create(first_name='Buyer', last_name='Buyer')
         self.buyer = Buyer.objects.create(contact=self.contact)
         self.order = Order.objects.create(buyer=self.buyer, reference_number='123456', total_amount=100.00)
-        self.payment = Payment.objects.create(order=self.order, amount=100.00, status='SUCCESS', processor='PayPal', transaction_id='123456')
+        self.payment = Payment.objects.create(order=self.order, amount=100.00, status=PaymentStatus.SUCCESS, processor='PayPal', provider_payment_id='123456')
         self.receipt = Receipt.objects.create(payment=self.payment, receipt_file='receipts/test.pdf')   
     
     def test_list_receipts(self):

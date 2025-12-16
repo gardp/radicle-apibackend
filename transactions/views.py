@@ -8,11 +8,14 @@ from rest_framework import status
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
+from transactions.services import PaymentService
+from django.conf import settings
 from common.models import Contact, Address
 from music.models import Contributor, Contribution, Track, MusicProfessional, SocialMediaLink
 from licenses.models import License, License_type, LicenseHolding, Licensee, LicenseStatus, TrackLicenseOptions
 from licenses.services import generate_license_agreement, send_license_email, build_download_urls
 from transactions.models import Order, OrderItem, Payment, PaymentStatus, Receipt, Buyer
+import stripe
 from decimal import Decimal
 from datetime import datetime
 class DebugLoggingMixin:
@@ -95,13 +98,13 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
           "payment": {
             "amount": "29.99",
             "processor": "creditCard",
-            "transaction_id": "TXN123"
+            "provider_payment_id": "TXN123"
           }
         }
         """
         data = request.data
         reference_number = request.headers.get('Idempotency-Key')
-        print("reference_number", reference_number)
+        print("reference_number", reference_number) #for idempotency and order tracking 
         print("data", data)
         
         # Validate required top-level fields
@@ -116,7 +119,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         if existing_order:
             return Response(
                 {
-                    "message": "Order already exists with this reference number." ,
+                    "message": "Order already exists with this reference number.",
                     "order_id": str(existing_order.order_id),
                     "reference_number": existing_order.reference_number,
                     "status": existing_order.status,
@@ -127,7 +130,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         
         # Validate required sections
         required_sections = ["licenseeContact", "musicProfessional", "buyerContact", "mailingRegistrationAddress", 
-                           "billingAddress", "items", "payment"]
+                           "billingAddress", "items"]
         missing = [s for s in required_sections if s not in data]
         if missing:
             return Response(
@@ -186,30 +189,39 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 )
                 
                 # ****ORDER****
-                # 7. Create order
+                # 7. Create an order variable that takes all the license prices and quantity in the backend to create the order in the backend instead so as it's safer from user tampering
+                subtotal = 0
+                for item_data in data["items"]:
+                    # get the track license option from each track
+                    track_license_option = TrackLicenseOptions.objects.get(track_license_option_id=item_data["track_license_option_id"])
+                    # get the license price from the track license option
+                    license_price = track_license_option.license_type.price
+                    # get the quantity from the item data
+                    quantity = item_data["quantity"]
+                    # calculate the total price for the item
+                    total_price = license_price * quantity
+                    # add the total price to the subtotal
+                    subtotal += total_price
+                # create the order with the subtotal as the total amount the tax amount is calculated in the model
                 order = Order.objects.create(
                     reference_number=data["referenceNumber"],
                     buyer=buyer,
-                    status=Order.OrderStatus.COMPLETED,
-                    total_amount=Decimal(data["payment"]["amount"]) 
+                    status=Order.OrderStatus.PENDING,
+                    subtotal=subtotal,
+                    currency="usd",
                 )
-                
-                # ****PAYMENT****
-                # 8. Create payment
-                payment_data = data["payment"].copy()
-                payment_data["order"] = order
-                payment_data["status"] = PaymentStatus.SUCCESS
-                payment_data["amount"] = Decimal(payment_data["amount"])
-                payment = Payment.objects.create(**payment_data)
-                
+            
                 # ****LICENSE****
-                # 9. Process each cart item
+                # 9. Process each cart item license
                 created_licenses = []
                 holdings = []
                 for item_data in data["items"]:
                     track_id = item_data.get("track_id")
                     track_license_option_id = item_data.get("track_license_option_id")
-                    price = Decimal(item_data.get("price", 0))
+                    # It's more secure to get the price of each license in the backend to that users don't temper with it
+                    track_license_option = TrackLicenseOptions.objects.get(track_license_option_id=track_license_option_id)
+                    price = track_license_option.license_type.price
+                    # get the quantity from the item data
                     quantity = item_data.get("quantity", 1)
                     print("track_id", track_id)
                     # Validate track and license_type exist
@@ -252,7 +264,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         license_status_option='Active',
                         license_status_date=timezone.now(),
                     )
-                     #TODO: Add license agreement file  
+                     #TODO: Add to payment view instead of order or verify that payment went trough
                     generate_license_agreement(license_obj)
                     license_url, track_url = build_download_urls(request, license_obj)
                     send_license_email(license_obj, licensee.music_professional.contact.email, license_url, track_url)
@@ -275,8 +287,8 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     "buyer_id": str(buyer.buyer_id),
                     "buyer_name": f"{buyer.contact.first_name} {buyer.contact.last_name}".strip(),
                     "buyer_email": buyer.contact.email,
-                    "amount": str(payment.amount),
-                    "status": payment.status,
+                    "amount": str(order.total_amount),
+                    "status": order.status,
                     "licenses": created_licenses
                 })
 
@@ -286,6 +298,10 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     "reference_number": order.reference_number,
                     "status": order.status,
                     "total_amount": str(order.total_amount),
+                    "currency": order.currency,
+                    "subtotal": str(order.subtotal),
+                    "tax_rate": str(order.tax_rate),
+                    "tax_amount": str(order.tax_amount),
                     "created_at": order.created_at,
                     "buyer": {
                         "buyer_id": str(buyer.buyer_id),
@@ -293,13 +309,13 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         "buyer_email": buyer.contact.email
                     },
                     "license_holdings": holdings,
-                    "payment": {
-                        "payment_id": str(payment.payment_id),
-                        "transaction_id": payment.transaction_id,
-                        "processor": payment.processor,
-                        "amount": str(payment.amount),
-                        "status": payment.status
-                    },
+                    # "payment": {
+                    #     "payment_id": str(payment.payment_id),
+                    #     "transaction_id": payment.transaction_id,
+                    #     "processor": payment.processor,
+                    #     "amount": str(payment.amount),
+                    #     "status": payment.status
+                    # },
                     # "items": [{
                     #     "track_id": str(order_item.track.track_id),
                     #     "track_title": order_item.track.title,
@@ -339,11 +355,155 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
     API endpoint for Payments with debug logging.
     Permissions are open for development purposes.
     """
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
-    permission_classes = [permissions.AllowAny]
-    pagination_class = None
+    @action(detail=False, methods=['post'])
+    def create_payment_intent(self, request):
+        data = request.data
+        reference_number = request.headers.get('Idempotency-Key')
+        print("reference_number", reference_number)
+        print("data", data)
+    
+    # Validate required top-level fields
+        if not reference_number:
+            return Response(
+                {"reference_number": ["This field is required for idempotency."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            order_id = data.get('order_id')
+            provider = data.get('provider')
+            currency = data.get('currency')
+            
+            order = Order.objects.get(order_id=order_id)
+            
+            if provider == 'stripe':
+                payment_intent, client_secret = PaymentService.create_stripe_payment(
+                    order=order,
+                    currency=currency
+                )
+                return Response({
+                    'client_secret': client_secret,
+                    'stripe_intent_id': payment_intent.provider_payment_id,
+                    'publishable_key': settings.STRIPE_PUBLISHABLE_KEY
+                })
+            
+            elif provider == 'paypal':
+                return_url = request.build_absolute_uri('/payment/success/')
+                cancel_url = request.build_absolute_uri('/payment/cancel/')
+                # creating the payment intent using the payment parameters in create_paypal_payment
+                payment_intent, approval_url = PaymentService.create_paypal_payment(
+                    order=order,
+                    currency=currency,
+                    return_url=return_url,
+                    cancel_url=cancel_url
+                )
 
+                return Response({
+                    'payment_id': payment_intent.provider_payment_id,
+                    'approval_url': approval_url
+                })
+                
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Order not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    @action(detail=False, methods=['post'])
+    def execute_paypal_payment(self, request):
+      """Capture a PayPal order after user approval"""
+      paypal_order_id = request.data.get('order_id')
+      
+      if not paypal_order_id:
+          return Response(
+              {'error': 'PayPal order_id is required'},
+              status=status.HTTP_400_BAD_REQUEST
+          )
+      
+      try:
+          # Find the payment record
+          payment = Payment.objects.get(
+              provider='paypal',
+              provider_payment_id=paypal_order_id
+          )
+          
+          # Capture the payment via PayPal
+          paypal_payment = PaymentService.execute_paypal_payment(paypal_order_id)
+          
+          # Update payment status
+          payment.status = PaymentStatus.SUCCESS
+          payment.save()
+          
+          # Update order status
+          order = payment.order
+          order.status = Order.OrderStatus.COMPLETED
+          order.save()
+          
+          # Send confirmation email
+          send_purchase_confirmation(order)
+          
+          return Response({
+              'status': payment.status,
+              'order_id': str(order.order_id),
+              'reference_number': order.reference_number
+          })
+          
+      except Payment.DoesNotExist:
+          return Response(
+              {'error': 'Payment not found'},
+              status=status.HTTP_404_NOT_FOUND
+          )
+      except Exception as e:
+          return Response(
+              {'error': str(e)},
+              status=status.HTTP_400_BAD_REQUEST
+          )    
+    
+    @action(detail=False, methods=['post'])
+    def webhook(self, request):
+        payload = request.body
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        
+        try:
+            if request.headers.get('X-PayPal-Webhook-Id'):
+                # Handle PayPal webhook
+                event = request.data
+                payment_intent = Payment.objects.get(
+                    provider='paypal',
+                    provider_payment_id=event['resource']['id']
+                )
+            else:
+                # Handle Stripe webhook
+                event = stripe.Webhook.construct_event(
+                    payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+                )
+                payment_intent = Payment.objects.get(
+                    provider='stripe',
+                    provider_payment_id=event['data']['object']['id']
+                )
+
+            if event['type'].endswith('succeeded'):
+                payment_intent.status = PaymentStatus.SUCCESS
+                payment_intent.save()
+                
+                # Update order status
+                order = payment_intent.order
+                order.status = Order.OrderStatus.COMPLETED
+                order.save()
+                
+                # Send confirmation email
+                send_purchase_confirmation(order)
+                
+            return Response({'status': payment_intent.status})
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class ReceiptViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
     """

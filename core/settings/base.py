@@ -21,6 +21,15 @@ if not SECRET_KEY:
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+# Stripe settings
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = config("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
+
+# PayPal settings
+PAYPAL_MODE = config("PAYPAL_MODE", default="sandbox")
+PAYPAL_CLIENT_ID = config("PAYPAL_CLIENT_ID", default="")
+PAYPAL_CLIENT_SECRET = config("PAYPAL_CLIENT_SECRET", default="")
 
 ALLOWED_HOSTS = []
 
@@ -42,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
     # Local apps
     'api.apps.ApiConfig',
     'custom_users.apps.CustomUsersConfig',
@@ -128,7 +138,7 @@ AUTH_USER_MODEL = 'custom_users.CustomUser'
 
 # Media files (user-uploaded)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media' # This will be unused if using Spaces, but good to define
+MEDIA_ROOT = BASE_DIR / 'media' # This will be unused if using Spaces, but it's the base media directory when saving in admin panels
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", # React dev server
 ]
