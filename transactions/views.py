@@ -376,6 +376,7 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
             order = Order.objects.get(order_id=order_id)
             
             if provider == 'stripe':
+                # creating the payment intent using the payment parameters in create_stripe_payment
                 payment_intent, client_secret = PaymentService.create_stripe_payment(
                     order=order,
                     currency=currency
@@ -387,19 +388,14 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 })
             
             elif provider == 'paypal':
-                return_url = request.build_absolute_uri('/payment/success/')
-                cancel_url = request.build_absolute_uri('/payment/cancel/')
-                # creating the payment intent using the payment parameters in create_paypal_payment
-                payment_intent, approval_url = PaymentService.create_paypal_payment(
+                # creating the payment intent using the payment parameters in create_paypal_order
+                payment_intent, paypal_order_id = PaymentService.create_paypal_order(
                     order=order,
                     currency=currency,
-                    return_url=return_url,
-                    cancel_url=cancel_url
                 )
 
                 return Response({
-                    'payment_id': payment_intent.provider_payment_id,
-                    'approval_url': approval_url
+                    'paypal_order_id': paypal_order_id, #This is the paypal order id as it's saved in the database record payment table
                 })
                 
         except Order.DoesNotExist:
@@ -412,56 +408,49 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    @action(detail=False, methods=['post'])
-    def execute_paypal_payment(self, request):
-      """Capture a PayPal order after user approval"""
-      paypal_order_id = request.data.get('order_id')
-      
-      if not paypal_order_id:
-          return Response(
-              {'error': 'PayPal order_id is required'},
-              status=status.HTTP_400_BAD_REQUEST
-          )
-      
-      try:
-          # Find the payment record
-          payment = Payment.objects.get(
-              provider='paypal',
-              provider_payment_id=paypal_order_id
-          )
-          
-          # Capture the payment via PayPal
-          paypal_payment = PaymentService.execute_paypal_payment(paypal_order_id)
-          
-          # Update payment status
-          payment.status = PaymentStatus.SUCCESS
-          payment.save()
-          
-          # Update order status
-          order = payment.order
-          order.status = Order.OrderStatus.COMPLETED
-          order.save()
-          
-          # Send confirmation email
-          send_purchase_confirmation(order)
-          
-          return Response({
-              'status': payment.status,
-              'order_id': str(order.order_id),
-              'reference_number': order.reference_number
-          })
-          
-      except Payment.DoesNotExist:
-          return Response(
-              {'error': 'Payment not found'},
-              status=status.HTTP_404_NOT_FOUND
-          )
-      except Exception as e:
-          return Response(
-              {'error': str(e)},
-              status=status.HTTP_400_BAD_REQUEST
-          )    
     
+    @action(detail=False, methods=['post'])
+    def capture_paypal_order(self, request):
+        paypal_order_id = request.data.get('paypal_order_id')
+    
+        if not paypal_order_id:
+            return Response(
+                {'error': 'paypal_order_id is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+        try:
+            # Find your payment record
+            payment = Payment.objects.get(
+                provider='paypal',
+                provider_payment_id=paypal_order_id
+            )
+        
+            # Capture via PayPal
+            capture_data = PaymentService.capture_paypal_order(paypal_order_id)
+        
+            # Update statuses
+            payment.status = PaymentStatus.SUCCESS
+            payment.save()
+        
+            order = payment.order
+            order.status = Order.OrderStatus.COMPLETED
+            order.save()
+        
+            # Send confirmation
+            send_purchase_confirmation(order)
+        
+            return Response({
+                'status': 'success',
+                'order_id': str(order.order_id),
+                'reference_number': order.reference_number
+            })
+        
+        except Payment.DoesNotExist:
+            return Response({'error': 'Payment not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
     @action(detail=False, methods=['post'])
     def webhook(self, request):
         payload = request.body
