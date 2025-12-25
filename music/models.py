@@ -197,7 +197,7 @@ class SocialMediaLink(models.Model):
     social_media_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
                                        help_text="Unique identifier for the social media link.")
     url = models.URLField()
-    platform = models.CharField(max_length=50)  # 'Instagram', 'Twitter', etc.
+    platform = models.CharField(max_length=50, blank=True, null=True)  # 'Instagram', 'Twitter', etc.
     music_professional = models.ForeignKey(MusicProfessional, on_delete=models.CASCADE, related_name='social_media_links')
     def __str__(self):
         return str(self.social_media_id) + " " + self.platform

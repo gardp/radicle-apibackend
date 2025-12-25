@@ -138,11 +138,11 @@ class Command(BaseCommand):
                 'genres': ['Hip-Hop', 'Trap'],
                 'moods': ['Uplifting', 'Energetic'],
                 'duration_seconds': 180,
-                'file_path': '/Users/gardlyphiloctete/Music/Logic/Whisper/Lust2Luv Mastered 20240521.wav',  # explicit path
+                'file_path': '/host_music/Logic/Whisper/Lust2Luv Mastered 20240521.wav', # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://youtube.com/buy',
                 'stream_link': 'https://youtube.com/stream',
                 'download_link': 'https://youtube.com/download',
@@ -156,11 +156,11 @@ class Command(BaseCommand):
                 'genres': ['R&B', 'Soul'],
                 'moods': ['Melancholy', 'Smooth'],
                 'duration_seconds': 210,
-                'file_path': '/Users/gardlyphiloctete/Music/Logic/Samba Rele/Gardly Asimilak Test/Gardly_Asimilak_ Mastered 20240424.wav',  # explicit path
+                'file_path': '/host_music/Logic/Samba Rele/Gardly Asimilak Test/Gardly_Asimilak_ Mastered 20240424.wav',  # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://example.com/buy',
                 'stream_link': 'https://example.com/stream',
                 'download_link': 'https://example.com/download',
@@ -173,11 +173,11 @@ class Command(BaseCommand):
                 'genres': ['Electronic', 'Pop'],
                 'moods': ['Driving', 'Atmospheric'],
                 'duration_seconds': 195,
-                'file_path': '/Users/gardlyphiloctete/Music/Music/Media.localized/Music/Rita Ora & Imanbek/Bang - EP/01 Big (feat. Gunna).m4a',  # explicit path
+                'file_path': '/host_music/Music/Media.localized/Music/Rita Ora & Imanbek/Bang - EP/01 Big (feat. Gunna).m4a',  # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://youtube.com/buy',
                 'stream_link': 'https://youtube.com/stream',
                 'download_link': 'https://youtube.com/download',
@@ -190,11 +190,11 @@ class Command(BaseCommand):
                 'genres': ['Hip-Hop', 'Trap'],
                 'moods': ['Uplifting', 'Energetic'],
                 'duration_seconds': 180,
-                'file_path': '/Users/gardlyphiloctete/Music/Logic/Whisper/Lust2Luv Mastered 20240521.wav',  # explicit path
+                'file_path': '/host_music/Logic/Whisper/Lust2Luv Mastered 20240521.wav',  # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://youtube.com/buy',
                 'stream_link': 'https://youtube.com/stream',
                 'download_link': 'https://youtube.com/download',
@@ -207,11 +207,11 @@ class Command(BaseCommand):
                 'genres': ['R&B', 'Soul'],
                 'moods': ['Melancholy', 'Smooth'],
                 'duration_seconds': 210,
-                'file_path': '/Users/gardlyphiloctete/Music/Logic/Samba Rele/Gardly Asimilak Test/Gardly_Asimilak_ Mastered 20240424.wav',  # explicit path
+                'file_path': '/host_music/Logic/Samba Rele/Gardly Asimilak Test/Gardly_Asimilak_ Mastered 20240424.wav',  # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://youtube.com/buy',
                 'stream_link': 'https://youtube.com/stream',
                 'download_link': 'https://youtube.com/download',
@@ -224,11 +224,11 @@ class Command(BaseCommand):
                 'genres': ['Electronic', 'Pop'],
                 'moods': ['Driving', 'Atmospheric'],
                 'duration_seconds': 195,
-                'file_path': '/Users/gardlyphiloctete/Music/Music/Media.localized/Music/Rita Ora & Imanbek/Bang - EP/01 Big (feat. Gunna).m4a',  # explicit path
+                'file_path': '/host_music/Music/Media.localized/Music/Rita Ora & Imanbek/Bang - EP/01 Big (feat. Gunna).m4a',  # explicit path for docker 
                 'artists_features_line': 'GardlyRadicle',
-                'thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
-                'vinyl_thumbnail': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
-                'cover_art': '/Users/gardlyphiloctete/Documents/Music Admin/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
+                'thumbnail': '/host_media/logo avatar-web-promo- images/babypic_cartoon.png',  # explicit path
+                'vinyl_thumbnail': '/host_media/logo avatar-web-promo- images/vinyl-red.png',  # explicit path
+                'cover_art': '/host_media/logo avatar-web-promo- images/ChatGPT Image Apr 24, 2025, 12_02_08 AM.png',  # explicit path
                 'buy_link': 'https://youtube.com/buy',
                 'stream_link': 'https://youtube.com/stream',
                 'download_link': 'https://youtube.com/download',

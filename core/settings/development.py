@@ -14,12 +14,12 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # SQLite database for local development
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 # For static/media serving during development (Django's dev server)
 # No need for STATIC_ROOT/MEDIA_ROOT specific overrides here for simple dev,

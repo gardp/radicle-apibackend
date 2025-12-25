@@ -4,6 +4,7 @@ from .models import Copyright, CopyrightHolding, CopyrightStatus, License, Licen
 from .serializers import CopyrightSerializer, CopyrightHoldingSerializer, CopyrightStatusSerializer, LicenseSerializer, LicenseeSerializer, LicenseHoldingSerializer, LicenseStatusSerializer, LicenseTypeSerializer, TrackLicenseOptionsSerializer
 from rest_framework import viewsets 
 from rest_framework import permissions  
+from .services import generate_license_agreement, build_download_urls, send_license_email
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -32,6 +33,70 @@ class LicenseViewSet(viewsets.ModelViewSet):
     queryset = License.objects.all()
     serializer_class = LicenseSerializer
     permission_classes = [permissions.AllowAny]
+
+    @action(detail=True, methods=['post'], url_path='generate-agreement')
+    def generate_agreement(self, request, pk=None):
+        """
+        Generate license agreement PDF for a specific license.
+        POST /licenses/{license_id}/generate-agreement/
+        """
+        license_obj = self.get_object()
+        
+        if license_obj.license_agreement_file:
+            return Response({
+                'message': 'License agreement already exists',
+                'license_id': str(license_obj.license_id),
+                'file_url': license_obj.license_agreement_file.url
+            })
+        
+        generate_license_agreement(license_obj)
+        
+        return Response({
+            'message': 'License agreement generated',
+            'license_id': str(license_obj.license_id),
+            'file_url': license_obj.license_agreement_file.url if license_obj.license_agreement_file else None
+        })
+    @action(detail=True, methods=['post'], url_path='send-email')
+    def send_email(self, request, pk=None):
+        """
+        Send license email to a specific contact.
+        POST /licenses/{license_id}/send-email/
+        
+        Request body:
+        {
+            "email": "buyer@example.com"  # Optional - defaults to licensee's email
+        }
+        """
+        license_obj = self.get_object()
+        
+        # Check if PDF exists
+        if not license_obj.license_agreement_file:
+            return Response(
+                {'error': 'License agreement not generated yet. Call generate-agreement first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get email from request or fall back to licensee's email
+        email = request.data.get('email')
+        if not email:
+            holding = license_obj.license_holdings.first()
+            if holding:
+                email = holding.licensee.music_professional.contact.email
+            else:
+                return Response(
+                    {'error': 'No email provided and no licensee found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Build URLs and send
+        license_url, track_url = build_download_urls(request, license_obj)
+        send_license_email(license_obj, email, license_url, track_url)
+        
+        return Response({
+            'message': 'License email sent',
+            'license_id': str(license_obj.license_id),
+            'sent_to': email
+        })
 
 
 class LicenseeViewSet(viewsets.ModelViewSet):

@@ -46,10 +46,23 @@ class PaymentService:
     @staticmethod
     def create_stripe_payment(order, currency='USD'):
         """Create a Stripe payment intent for the order"""
+        # CHECK FOR EXISTING PENDING PAYMENT RECORD FIRST
+        existing_payment = Payment.objects.filter(
+            order=order,
+            provider='stripe',
+            status=PaymentStatus.PENDING
+        ).first()
+    
+        if existing_payment:
+            # Retrieve the existing PaymentIntent to get client_secret
+            stripe_intent = stripe.PaymentIntent.retrieve(existing_payment.provider_payment_id)
+            return existing_payment, stripe_intent.client_secret
+        # IF NO EXISTING PAYMENT RECORD, CREATE A NEW ONE
         try:
             stripe_intent = stripe.PaymentIntent.create(
                 amount=int(order.total_amount * 100),  # Convert to cents
                 currency=currency.lower(),
+                receipt_email=order.buyer.contact.email,
                 metadata={
                     'order_id': str(order.order_id),
                     'reference_number': order.reference_number
@@ -70,6 +83,17 @@ class PaymentService:
 
     @staticmethod
     def create_paypal_order(order, currency='USD'):
+        # CHECK FOR EXISTING PENDING PAYMENT RECORD FIRST
+        existing_payment = Payment.objects.filter(
+            order=order,
+            provider='paypal',
+            status=PaymentStatus.PENDING
+        ).first()
+    
+        if existing_payment:
+            # Return existing payment instead of creating new one
+            return existing_payment, existing_payment.provider_payment_id
+
         """Create a PayPal order for smart buttons with the access token"""
         access_token = PayPalClient.get_access_token()
         #CREATING ORDER AFTER GETTING ACCESS TOKEN

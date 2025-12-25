@@ -13,7 +13,6 @@ from django.conf import settings
 from common.models import Contact, Address
 from music.models import Contributor, Contribution, Track, MusicProfessional, SocialMediaLink
 from licenses.models import License, License_type, LicenseHolding, Licensee, LicenseStatus, TrackLicenseOptions
-from licenses.services import generate_license_agreement, send_license_email, build_download_urls
 from transactions.models import Order, OrderItem, Payment, PaymentStatus, Receipt, Buyer
 import stripe
 from decimal import Decimal
@@ -147,6 +146,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 # ********LICENSEE********
+                print("********LICENSEE********")
                 # 1. Create licensee contact
                 licensee_contact_data = data["licenseeContact"]
                 licensee_contact = Contact(**licensee_contact_data)
@@ -168,7 +168,9 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 
                 # Social Media Links (optional)
                 if "socialMediaLinks" in data and data["socialMediaLinks"]:
-                    for url in data["socialMediaLinks"]:
+                    print("Social Media Links:", data["socialMediaLinks"])
+                    social_media_dict = data["socialMediaLinks"]
+                    for url in social_media_dict["url"]:
                         SocialMediaLink.objects.create(url=url, music_professional=music_professional)
 
                 # ****BUYER****
@@ -187,7 +189,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 buyer = Buyer.objects.create(
                     contact=buyer_contact
                 )
-                
+
                 # ****ORDER****
                 # 7. Create an order variable that takes all the license prices and quantity in the backend to create the order in the backend instead so as it's safer from user tampering
                 subtotal = 0
@@ -204,7 +206,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     subtotal += total_price
                 # create the order with the subtotal as the total amount the tax amount is calculated in the model
                 order = Order.objects.create(
-                    reference_number=data["referenceNumber"],
+                    reference_number=reference_number,
                     buyer=buyer,
                     status=Order.OrderStatus.PENDING,
                     subtotal=subtotal,
@@ -223,7 +225,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     price = track_license_option.license_type.price
                     # get the quantity from the item data
                     quantity = item_data.get("quantity", 1)
-                    print("track_id", track_id)
+                    print("my track_id", track_id)
                     # Validate track and license_type exist
                     try:
                         track = Track.objects.get(track_id=track_id)
@@ -233,22 +235,26 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     except TrackLicenseOptions.DoesNotExist:
                         raise ValueError(f"Track license option {track_license_option_id} not found")
                     
-                    # Create license - And MAKE SURE YO INCLUDE THE LICENSE_AGREEMENT_FILE LATER
-                    license_obj = License.objects.create(
-                        track_license_option=track_license_option,
-                    ) 
-                    #TODO: Automate expiration date
-                    
                     # ****ORDERITEM****
-                    # Create orderItem (generic FK to track, not license)
-                    content_type = ContentType.objects.get(app_label='music', model='track')
+                    # Create orderItem (generic FK to track_license_option instead of license) as it will be used to create the license
+                    # License is typically a derived artifact that can change state over time.
+                    # *License represents fulfillment generated from that purchase.
+                    # *TrackLicenseOption is the product being purchased.
+                    content_type = ContentType.objects.get(app_label='licenses', model='tracklicenseoptions')
                     order_item = OrderItem.objects.create(
                         order=order,
                         content_type=content_type,
-                        object_id=track_id,
+                        object_id=track_license_option.track_license_option_id,
                         quantity=quantity,
                         price=price
                     )
+                    
+                    # Create license - And MAKE SURE YO INCLUDE THE LICENSE_AGREEMENT_FILE LATER
+                    license_obj = License.objects.create(
+                        track_license_option=track_license_option,
+                        order_item=order_item,
+                    ) 
+                    #TODO: Automate expiration date
                     
                     # ****LICENSEHOLDING****
                     # Create license holdings for each licensee
@@ -264,11 +270,6 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         license_status_option='Active',
                         license_status_date=timezone.now(),
                     )
-                     #TODO: Add to payment view instead of order or verify that payment went trough
-                    generate_license_agreement(license_obj)
-                    license_url, track_url = build_download_urls(request, license_obj)
-                    send_license_email(license_obj, licensee.music_professional.contact.email, license_url, track_url)
-                    #TODO: how to manage the license_status_date update for when the license expires
                     
                     created_licenses.append({
                         "license_id": str(license_obj.license_id),
@@ -309,20 +310,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         "buyer_email": buyer.contact.email
                     },
                     "license_holdings": holdings,
-                    # "payment": {
-                    #     "payment_id": str(payment.payment_id),
-                    #     "transaction_id": payment.transaction_id,
-                    #     "processor": payment.processor,
-                    #     "amount": str(payment.amount),
-                    #     "status": payment.status
-                    # },
-                    # "items": [{
-                    #     "track_id": str(order_item.track.track_id),
-                    #     "track_title": order_item.track.title,
-                    #     "license_type": order_item.license_type.license_type_name,
-                    #     "download_url": order_item.license_agreement_file.url if order_item.license_agreement_file else None,
-                    #     "holdings": holdings
-                    # } ],
+
 
                     "message": "Order completed successfully. Licenses created and ready for download."
                 }, status=status.HTTP_201_CREATED)
@@ -360,7 +348,7 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         data = request.data
         reference_number = request.headers.get('Idempotency-Key')
         print("reference_number", reference_number)
-        print("data", data)
+        print("payment intent data", data)
     
     # Validate required top-level fields
         if not reference_number:
@@ -429,16 +417,20 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
             # Capture via PayPal
             capture_data = PaymentService.capture_paypal_order(paypal_order_id)
         
-            # Update statuses
-            payment.status = PaymentStatus.SUCCESS
-            payment.save()
+            # Update statuses and fulfill licenses after transaction commits for idempotency for PayPal
+            with transaction.atomic():
+                payment.status = PaymentStatus.SUCCESS
+                payment.save()
+
+                order = payment.order
+                order.status = Order.OrderStatus.COMPLETED
+                order.save()
+                print("Order status updated- now fulfilling order licenses")
+                # Fulfill order licenses after transaction commits asynchronously using Celery
+                transaction.on_commit(lambda: fulfill_order_licenses.delay(str(order.order_id)))
         
-            order = payment.order
-            order.status = Order.OrderStatus.COMPLETED
-            order.save()
-        
-            # Send confirmation
-            send_purchase_confirmation(order)
+            # Send confirmation - to set up later for more email customization
+            # send_purchase_confirmation(order)
         
             return Response({
                 'status': 'success',
@@ -451,48 +443,70 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=400)
 
+    # Stripe Webhook for handling payment events
     @action(detail=False, methods=['post'])
     def webhook(self, request):
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-        
+        print("Order status updated- now fulfilling order licenses")
         try:
-            if request.headers.get('X-PayPal-Webhook-Id'):
-                # Handle PayPal webhook
-                event = request.data
-                payment_intent = Payment.objects.get(
-                    provider='paypal',
-                    provider_payment_id=event['resource']['id']
-                )
-            else:
-                # Handle Stripe webhook
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-                )
-                payment_intent = Payment.objects.get(
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            )
+        except ValueError:
+            # Invalid payload
+            return Response({'error': 'Invalid payload'}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.SignatureVerificationError:
+            # Invalid signature
+            return Response({'error': 'Invalid signature'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Handle specific event types
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent_data = event['data']['object']
+            
+            try:
+                payment = Payment.objects.get(
                     provider='stripe',
-                    provider_payment_id=event['data']['object']['id']
+                    provider_payment_id=payment_intent_data['id']
                 )
-
-            if event['type'].endswith('succeeded'):
-                payment_intent.status = PaymentStatus.SUCCESS
-                payment_intent.save()
                 
-                # Update order status
-                order = payment_intent.order
-                order.status = Order.OrderStatus.COMPLETED
+                with transaction.atomic():
+                    payment.status = PaymentStatus.SUCCESS
+                    payment.save()
+                    
+                    order = payment.order
+                    order.status = Order.OrderStatus.COMPLETED
+                    order.save()
+                    #******* Fulfill STRIPE order licenses after transaction commits asynchronously using Celery    
+                    transaction.on_commit(lambda: __import__("licenses.tasks").tasks.fulfill_order_licenses.delay(str(order.order_id)))
+
+                # Send confirmation - to set up later for more email customization
+                # send_purchase_confirmation(order)
+                
+            except Payment.DoesNotExist:
+                return Response({'error': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        elif event['type'] == 'payment_intent.payment_failed':
+            payment_intent_data = event['data']['object']
+            
+            try:
+                payment = Payment.objects.get(
+                    provider='stripe',
+                    provider_payment_id=payment_intent_data['id']
+                )
+                payment.status = PaymentStatus.FAILED
+                payment.save()
+                
+                order = payment.order
+                order.status = Order.OrderStatus.FAILED
                 order.save()
                 
-                # Send confirmation email
-                send_purchase_confirmation(order)
-                
-            return Response({'status': payment_intent.status})
-            
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            except Payment.DoesNotExist:
+                pass  # Payment not found, ignore
+        
+        # Return 200 for all events (Stripe expects this)
+        return Response({'status': 'success'})
+
 
 class ReceiptViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
     """

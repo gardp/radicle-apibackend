@@ -70,7 +70,7 @@ class OrderItem(models.Model):
     order_item_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     
-    # Generic foreign key to the product being purchased (e.g., a Track, a Merch item)
+    # Generic foreign key to the product being purchased (e.g., a TrackLicenseOption, a Merch item)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.UUIDField() # Assumes your product PKs are UUIDs
     purchased_item = GenericForeignKey('content_type', 'object_id')

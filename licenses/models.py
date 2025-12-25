@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 import uuid
 from music.models import Track, Contributor, Contact, TrackStorageFile, MusicProfessional, ROLE_CHOICES
+from transactions.models import OrderItem
 
 
 # Create your models here.
@@ -133,10 +134,14 @@ class License(models.Model):
                             help_text="The license agreement for the sound recording.")
     track_license_option = models.ForeignKey(TrackLicenseOptions, on_delete=models.CASCADE, related_name='licenses',
                                       help_text="The type of license (e.g., 'Wav, mp3, stems').")
-    created_date = models.DateField(auto_now_add=True,
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='licenses', null=True, blank=True,
+                            help_text="The order item for the license.")
+    created_date = models.DateTimeField(auto_now_add=True,
                             help_text="The date the license for the sound recording was established.")
-    expiration_date = models.DateField(null=True, blank=True,
+    expiration_date = models.DateTimeField(null=True, blank=True,
                             help_text="The expiration date of the license for the sound recording.")
+    license_email_sent_at = models.DateTimeField(null=True, blank=True,
+                            help_text="The date and time the license email was sent.")
     license_note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the license.")
     
@@ -169,7 +174,7 @@ class LicenseStatus(models.Model):
                                     help_text="Unique identifier for the license status.")
     license_status_option = models.CharField(max_length=255, choices=[('Active', 'Active'), ('Expired', 'Expired'), ('Cancelled', 'Cancelled')],
                             help_text="The type of license status (e.g., 'Active', 'Expired', 'Cancelled').")
-    license_status_date = models.DateField(null=False, 
+    license_status_date = models.DateTimeField(null=False, 
                             help_text="The date the license status was created.")
     license = models.ForeignKey(License, on_delete=models.CASCADE, related_name='license_status',
                             help_text="The license record.")

@@ -24,7 +24,10 @@ python-decouple==3.8
 stripe>=13.0.0
 paypal-server-sdk==1.1.0
 django-environ>=0.10.0  # for secure env management
-
+celery
+redis
+weasyprint
+paypalrestsdk
 
 
 
