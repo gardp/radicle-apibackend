@@ -13,6 +13,7 @@ from django.conf import settings
 from common.models import Contact, Address
 from music.models import Contributor, Contribution, Track, MusicProfessional, SocialMediaLink
 from licenses.models import License, License_type, LicenseHolding, Licensee, LicenseStatus, TrackLicenseOptions
+from licenses.tasks import fulfill_order_licenses
 from transactions.models import Order, OrderItem, Payment, PaymentStatus, Receipt, Buyer
 import stripe
 from decimal import Decimal
@@ -478,7 +479,8 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     order.status = Order.OrderStatus.COMPLETED
                     order.save()
                     #******* Fulfill STRIPE order licenses after transaction commits asynchronously using Celery    
-                    transaction.on_commit(lambda: __import__("licenses.tasks").tasks.fulfill_order_licenses.delay(str(order.order_id)))
+                    # transaction.on_commit(lambda: __import__("licenses.tasks").tasks.fulfill_order_licenses.delay(str(order.order_id)))
+                    transaction.on_commit(lambda: fulfill_order_licenses.delay(str(order.order_id)))
 
                 # Send confirmation - to set up later for more email customization
                 # send_purchase_confirmation(order)

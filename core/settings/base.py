@@ -4,6 +4,7 @@ from datetime import timedelta
 import os
 import sys 
 import dj_database_url
+from django.conf.global_settings import EMAIL_TIMEOUT
 
 
 # since the settings.py is in the core folder, we need to go up one level to get the base directory
@@ -20,7 +21,16 @@ if not SECRET_KEY:
 # Decouple will automatically find and load the .env file.
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
+EMAIL_TIMEOUT = 10
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+# Email settings to send license contracts
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 # Stripe settings
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = config("STRIPE_PUBLISHABLE_KEY", default="")
@@ -98,15 +108,6 @@ TEMPLATES = [
         },
     },
 ]
-
-# Email settings to send license contracts
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
