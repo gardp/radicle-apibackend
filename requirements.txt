@@ -28,7 +28,9 @@ celery
 redis
 weasyprint
 paypalrestsdk
+sendgrid==6.11.0
 xhtml2pdf
+ 
 
 
 

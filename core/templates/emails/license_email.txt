@@ -1,0 +1,13 @@
+Thank you for your purchase.
+
+Order Reference: {{ order_reference }}
+
+Your Downloads:
+{% for item in licenses %}
+Track: {{ item.track_title }}
+- Download Track: {{ item.track_url }}
+- Download License Agreement: {{ item.license_url }}
+
+{% endfor %}
+
+A copy of your license agreement(s) is also attached to this email.

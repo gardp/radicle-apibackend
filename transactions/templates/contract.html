@@ -25,7 +25,7 @@
     </div>
 
     <div class="section">
-        This license agreement (the "Agreement") is entered into on this {{ effective_date|date:"j"|default:"___" }} day of {{ effective_date|date:"F"|default:"____________" }}, {{ effective_date|date:"Y"|default:"2025" }} (the "Effective Date") by and between {{ licensor_name|default:"________________" }} (hereinafter the "Licensor") with an address at {{ licensor_address.0|default:"________________" }} and {{ licensee_name|default:"________________" }} (hereinafter "Licensee") with an address at {{ licensee_address.0|default:"________________" }} and collectively referred to as 'Parties'.
+        This license agreement (the "Agreement") is entered into on this {{ effective_date|date:"j"|default:"___" }} day of {{ effective_date|date:"F"|default:"____________" }}, {{ effective_date|date:"Y"|default:"2025" }} (the "Effective Date") by and between {{ licensor_name|default:"________________" }} (hereinafter the "Licensor") with an address at {{ licensor_address.all.0|default:"________________" }} and {{ licensee_name|default:"________________" }} (hereinafter "Licensee") with an address at {{ licensee_address.all.0|default:"________________" }} and collectively referred to as 'Parties'.
     </div>
 
     <div class="section">
@@ -255,11 +255,7 @@
         <div class="clause">
             <strong>Timing:</strong> 
             {% if track_duration %}
-                {% with minutes=track_duration|divisibleby:60|yesno:track_duration|add:"0,0"|floatformat:"0" %}
-                {% with minutes_int=track_duration|floatformat:"0"|add:"0"|stringformat:"d" %}
-                {% with seconds=track_duration|divisibleby:60|stringformat:"02d" %}
-                {{ minutes_int }}:{{ seconds }}
-                {% endwith %}{% endwith %}{% endwith %}
+                {{ track_duration }}
             {% else %}
                 __________________
             {% endif %}
@@ -300,7 +296,7 @@
         </div>
         
         <div class="clause">
-            <strong>Licensor's Share:</strong> {% widthratio 100|add:-licensee_share|default:"50" 1 1 %}%
+            <strong>Licensor's Share:</strong> 50%
         </div>
     </div>
 </body>

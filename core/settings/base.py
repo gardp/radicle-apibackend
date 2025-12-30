@@ -24,7 +24,20 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_APP_PASSWORD", default="")
 EMAIL_TIMEOUT = 10
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 # Email settings to send license contracts
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# SendGrid Settings
+SENDGRID_API_KEY = config("SENDGRID_API_KEY", default="")
+SENDGRID_FROM_EMAIL = config("SENDGRID_FROM_EMAIL", default=EMAIL_HOST_USER)
+
+# Dynamic Email Backend Selection
+EMAIL_BACKEND_TYPE = config("EMAIL_BACKEND_TYPE", default="smtp")
+
+if EMAIL_BACKEND_TYPE == "sendgrid":
+    EMAIL_BACKEND = 'core.email_backends.SendGridBackend'
+elif EMAIL_BACKEND_TYPE == "hybrid":
+    EMAIL_BACKEND = 'core.email_backends.HybridEmailBackend'
+else:
+    # Keep existing SMTP backend as default
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True

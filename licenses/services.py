@@ -1,13 +1,12 @@
-
+```python
 from django.template import Template, Context
 from django.core.files.base import ContentFile
 from xhtml2pdf import pisa
 from django.urls import reverse
-from urllib.parse import urljoin
-from django.core.mail import send_mail
-from .models import License, LicenseHolding
-from django.core.mail import EmailMessage
 from django.conf import settings
+from django.core.mail import EmailMessage
+from .models import License
+from .utils import build_download_urls_from_base
 import io
 # try:
 #     from weasyprint import HTML
@@ -129,47 +128,41 @@ def send_license_email(
     and links to download the track and license.
     """
     print("SENDING EMAIL TO", to_email)
-    track_license_urls = []
-    subject = f"Tracks and Licenses for Order {order_reference}"
+    
+    # Prepare context for template
+    license_items = []
     attachments = []
+    
     for license in licenses:
         if license.license_agreement_file:
-            license_url, track_url = build_download_urls_from_base(settings.PUBLIC_BASE_URL, license) # because celery doesn't allow request object
-            track_license_urls.append(
-                f"Your track and license for track:{license.track_license_option.track.title}\n\n"
-                f"Download your track here:\n{track_url}\n\n"
-                f"Download a copy of your license agreement here:\n{license_url}\n\n\n"
-            )
+            license_url, track_url = build_download_urls_from_base(settings.PUBLIC_BASE_URL, license)
             
+            license_items.append({
+                'track_title': license.track_license_option.track.title,
+                'track_url': track_url,
+                'license_url': license_url
+            })
+            
+            # Prepare attachment
             license.license_agreement_file.open("rb")
             content = license.license_agreement_file.read()
             license.license_agreement_file.close()
             filename = license.license_agreement_file.name.split("/")[-1] or f"license_{license.license_id}.pdf"
             attachments.append((filename, content, "application/pdf"))
 
+    # Send via EmailService
+    from core.email_service import EmailService
     
-    body = (
-        "Thank you for your purchase.\n\n"
-        f"Order Reference: {order_reference}\n\n"
-        f"{track_license_urls}\n\n"
+    EmailService.send_transactional_email(
+        subject=f"Tracks and Licenses for Order {order_reference}",
+        recipient_list=[to_email],
+        template_name="core/templates/emails/license_email",
+        context={
+            'order_reference': order_reference,
+            'licenses': license_items
+        },
+        attachments=attachments
     )
-    
-    email = EmailMessage(
-        subject=subject,
-        body=body,
-        from_email=settings.DEFAULT_FROM_EMAIL,  # uses DEFAULT_FROM_EMAIL
-        to=[to_email],
-    )
-
-    if attachments:
-        for filename, content, mimetype in attachments:
-            email.attach(filename, content, mimetype)
-    # email.send(fail_silently=False)
-    try:
-        email.send(fail_silently=False)
-    except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        raise
 
 
 # THIS IS UNECESSARY FOR NOW AS PAYPAL AND STRIPE AS A DEFAULT PAYMENT EMAIL TO SEND RECEIPT
