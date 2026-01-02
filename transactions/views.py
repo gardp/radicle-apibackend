@@ -129,8 +129,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
             )
         
         # Validate required sections
-        required_sections = ["licenseeContact", "musicProfessional", "buyerContact", "mailingRegistrationAddress", 
-                           "billingAddress", "items"]
+        required_sections = ["licenseeContact", "musicProfessional", "buyerContact", "mailingRegistrationAddress", "billingAddress", "items"]
         missing = [s for s in required_sections if s not in data]
         if missing:
             return Response(

@@ -43,7 +43,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
+ 
 
 # Stripe settings
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")

@@ -17,10 +17,7 @@ class EmailService:
         """
         backend_type = 'sendgrid' if getattr(settings, 'SENDGRID_API_KEY', None) else settings.EMAIL_BACKEND_TYPE
         
-        if backend_type == 'sendgrid':
-            backend = SendGridBackend(fail_silently=False)
-        else:
-            backend = get_connection()
+        backend = get_connection()
         
         try:
             send_mail(
