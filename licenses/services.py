@@ -1,12 +1,11 @@
-```python
 from django.template import Template, Context
 from django.core.files.base import ContentFile
 from xhtml2pdf import pisa
 from django.urls import reverse
+from urllib.parse import urljoin
 from django.conf import settings
 from django.core.mail import EmailMessage
-from .models import License
-from .utils import build_download_urls_from_base
+from .models import License, LicenseHolding
 import io
 # try:
 #     from weasyprint import HTML
@@ -156,7 +155,7 @@ def send_license_email(
     EmailService.send_transactional_email(
         subject=f"Tracks and Licenses for Order {order_reference}",
         recipient_list=[to_email],
-        template_name="core/templates/emails/license_email",
+        template_name="emails/license_email",
         context={
             'order_reference': order_reference,
             'licenses': license_items

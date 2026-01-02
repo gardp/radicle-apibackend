@@ -84,7 +84,7 @@ class SendGridBackend:
 
 class HybridEmailBackend:
     """
-    Hybrid email backend that tries SendGrid first, falls back to SMTP.
+    Hybrid email backend that tries SendGridBackend first, falls back to SMTP.
     """
     
     def __init__(self, fail_silently=False, **kwargs):

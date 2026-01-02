@@ -1,0 +1,8 @@
+<h2>Welcome to Our Newsletter!</h2>
+<p>Thanks for subscribing! You'll now receive updates for:</p>
+<ul>
+    {% for category in categories %}
+    <li>{{ category }}</li>
+    {% endfor %}
+</ul>
+<p>Don't want these emails? <a href="{{ unsubscribe_url }}">Unsubscribe</a></p>

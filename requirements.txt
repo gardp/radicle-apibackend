@@ -30,7 +30,8 @@ weasyprint
 paypalrestsdk
 sendgrid==6.11.0
 xhtml2pdf
- 
+django-summernote==0.8.20.0
+
 
 
 

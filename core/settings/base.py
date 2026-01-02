@@ -35,6 +35,7 @@ if EMAIL_BACKEND_TYPE == "sendgrid":
     EMAIL_BACKEND = 'core.email_backends.SendGridBackend'
 elif EMAIL_BACKEND_TYPE == "hybrid":
     EMAIL_BACKEND = 'core.email_backends.HybridEmailBackend'
+    
 else:
     # Keep existing SMTP backend as default
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' 
@@ -91,6 +92,8 @@ INSTALLED_APPS = [
     'transactions.apps.TransactionsConfig',
     'licenses.apps.LicensesConfig',
     'common.apps.CommonConfig',
+    'newsletter.apps.NewsletterConfig',
+    'django_summernote',
 ]
 
 MIDDLEWARE = [

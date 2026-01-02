@@ -21,7 +21,7 @@ services:
     env_file: .env
     ports:
       - "8000:8000"
-    volumes: #this is for hot reloading i.e. when you make changes to the code, the container will reload automatically
+    volumes: #this is for hot reloading i.e. when you make changes to the code, the container will reload automatically from a regeneration of the image
       - .:/app
       - /Users/gardlyphiloctete/Documents/Music Admin:/host_media
       - /Users/gardlyphiloctete/Music:/host_music
@@ -37,6 +37,10 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - .:/app
+      - /Users/gardlyphiloctete/Documents/Music Admin:/host_media
+      - /Users/gardlyphiloctete/Music:/host_music
 
 volumes:
   postgres_data:

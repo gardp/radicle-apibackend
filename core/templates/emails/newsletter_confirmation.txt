@@ -1,0 +1,8 @@
+Welcome to Our Newsletter!
+
+Thanks for subscribing! You'll now receive updates for:
+{% for category in categories %}
+- {{ category }}
+{% endfor %}
+
+Don't want these emails? Unsubscribe here: {{ unsubscribe_url }}
