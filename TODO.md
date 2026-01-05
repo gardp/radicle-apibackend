@@ -11,6 +11,7 @@
 - [ ] Think about integratiing open/click tracking in the future
 - [ ] change from npm start to vite in the frontend
 - [ ] make the music licensing page more engaging
+- [ ] Make the stem folder for email
 
 ## Bug Fixes
 - [ ] Fix the license agreement pdf generation

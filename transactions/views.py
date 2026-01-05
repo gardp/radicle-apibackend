@@ -149,45 +149,97 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 print("********LICENSEE********")
                 # 1. Create licensee contact
                 licensee_contact_data = data["licenseeContact"]
-                licensee_contact = Contact(**licensee_contact_data)
-                licensee_contact.full_clean()  # Validate before saving
-                licensee_contact.save ()
+                licensee_contact, _ = Contact.objects.update_or_create(
+                    email=licensee_contact_data["email"],
+                    defaults={
+                        "first_name" : licensee_contact_data.get("first_name"),
+                        "last_name " : licensee_contact_data.get("last_name"),
+                        "sudo_name" : licensee_contact_data.get("sudo_name"),
+                        "company_name" : licensee_contact_data.get("company_name"),
+                        "phone_number" : licensee_contact_data.get("phone"),
+                    }
+                )
+                print("licensee_contact", licensee_contact)
+                # licensee_contact.full_clean()  not needed fo rupdate and create...only for create
 
                 # 2. Get and create music professional(optional) and add the contact to it
-                music_professional = data["musicProfessional"] #ref_code, proaffiliation....etc
-                music_professional["contact"] = licensee_contact #passing the contact of the licensee to the music professional
-                music_professional = MusicProfessional.objects.create(**music_professional)
+                music_professional_data = data["musicProfessional"] #ref_code, proaffiliation....etc
+                music_professional_data["contact"] = licensee_contact #passing the contact of the licensee to the music professional
+                music_professional, _ = MusicProfessional.objects.update_or_create(
+                    contact=licensee_contact,
+                    defaults={
+                        "ref_code": music_professional_data.get("ref_code"),
+                        "proaffiliation": music_professional_data.get("proaffiliation"),
+                        "ipi_number": music_professional_data.get("ipi_number"),
+                    }
+                )
                 
-                # 2. Create licensee
-                licensee = Licensee.objects.create(music_professional=music_professional)
-                # 2. Now get licensee/registration/mailing address, add contact and create
-                mailing_registration_address = Address.objects.create(
-                    **data["mailingRegistrationAddress"],
+                # 3. Create licensee
+                licensee, _ = Licensee.objects.update_or_create(
+                    music_professional=music_professional,
+                    defaults={}
+                )
+
+
+                # 4. Now get licensee/registration/mailing address, add contact and create
+                mailing_registration_address_data = data["mailingRegistrationAddress"]
+                mailing_registration_address, _ = Address.objects.update_or_create(
                     contact = licensee_contact,
+                    defaults={
+                        "address_line_1": mailing_registration_address_data["address_line_1"],
+                        "address_line_2": mailing_registration_address_data["address_line_2"],
+                        "city": mailing_registration_address_data["city"],
+                        "state_province": mailing_registration_address_data["state_province"],
+                        "postal_code": mailing_registration_address_data["postal_code"],
+                        "country": mailing_registration_address_data["country"]
+                    }
                 )
                 
                 # Social Media Links (optional)
                 if "socialMediaLinks" in data and data["socialMediaLinks"]:
                     print("Social Media Links:", data["socialMediaLinks"])
                     social_media_dict = data["socialMediaLinks"]
-                    for url in social_media_dict["url"]:
-                        SocialMediaLink.objects.create(url=url, music_professional=music_professional)
+                    for url in social_media_dict:
+                        SocialMediaLink.objects.update_or_create(
+                            url=url,
+                            music_professional=music_professional,
+                            defaults={}
+                        )
 
                 # ****BUYER****
-                # 4. Create buyer contact
+                # 4. update or create buyer contact
                 buyer_contact_data = data["buyerContact"]
-                buyer_contact = Contact(**buyer_contact_data)
-                buyer_contact.full_clean()  # Validate before saving
-                buyer_contact.save()
+                buyer_contact, _ = Contact.objects.update_or_create(
+                    email=buyer_contact_data["email"],
+                    defaults={
+                        "first_name": buyer_contact_data.get("first_name"),
+                        "last_name": buyer_contact_data.get("last_name"),
+                        "sudo_name": buyer_contact_data.get("sudo_name"),
+                        "company_name": buyer_contact_data.get("company_name"),
+                        "phone_number": buyer_contact_data.get("phone"),
+                    }
+            )
+                # buyer_contact.full_clean()  # not needed for update and create
                 
                 # 5. Create billing address 
                 billing_address_data = data["billingAddress"].copy()
                 billing_address_data["contact"] = buyer_contact
-                billing_address = Address.objects.create(**billing_address_data)
+                billing_address, _ = Address.objects.update_or_create(
+                    contact = buyer_contact,
+                    defaults = {
+                        "address_line_1": billing_address_data.get("address_line_1"),
+                        "address_line_2": billing_address_data.get("address_line_2"),
+                        "city": billing_address_data.get("city"),
+                        "state_province": billing_address_data.get("state_province"),
+                        "postal_code": billing_address_data.get("postal_code"),
+                        "country": billing_address_data.get("country")
+                    }
+                )
                 
                 # 6. Create buyer
-                buyer = Buyer.objects.create(
-                    contact=buyer_contact
+                buyer, _ = Buyer.objects.update_or_create(
+                    contact=buyer_contact,
+                    defaults={}
                 )
 
                 # ****ORDER****
@@ -205,12 +257,14 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     # add the total price to the subtotal
                     subtotal += total_price
                 # create the order with the subtotal as the total amount the tax amount is calculated in the model
-                order = Order.objects.create(
+                order, _ = Order.objects.update_or_create(
                     reference_number=reference_number,
-                    buyer=buyer,
-                    status=Order.OrderStatus.PENDING,
-                    subtotal=subtotal,
-                    currency="usd",
+                    defaults={
+                        "buyer": buyer,
+                        "status": Order.OrderStatus.PENDING,
+                        "subtotal": subtotal,
+                        "currency": "usd",
+                    }
                 )
             
                 # ****LICENSE****
@@ -241,34 +295,43 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     # *License represents fulfillment generated from that purchase.
                     # *TrackLicenseOption is the product being purchased.
                     content_type = ContentType.objects.get(app_label='licenses', model='tracklicenseoptions')
-                    order_item = OrderItem.objects.create(
+                    order_item, _ = OrderItem.objects.update_or_create(
                         order=order,
-                        content_type=content_type,
                         object_id=track_license_option.track_license_option_id,
-                        quantity=quantity,
-                        price=price
+                        defaults={
+                            "content_type": content_type,
+                            "quantity": quantity,
+                            "price": price
+                        }
                     )
-                    
+
                     # Create license - And MAKE SURE YO INCLUDE THE LICENSE_AGREEMENT_FILE LATER
-                    license_obj = License.objects.create(
+                    license_obj, _ = License.objects.update_or_create(
                         track_license_option=track_license_option,
                         order_item=order_item,
+                        defaults={
+                            "license_agreement_file": track_license_option.license_type.license_agreement_file,
+                            "created_date": timezone.now(),
+                        }
                     ) 
                     #TODO: Automate expiration date
                     
                     # ****LICENSEHOLDING****
                     # Create license holdings for each licensee
                     # Create license holding
-                    holding = LicenseHolding.objects.create(
+                    holding, _ = LicenseHolding.objects.update_or_create(
                         license=license_obj,
-                        licensee=licensee, #from the created licensee above
+                        licensee=licensee,
+                        defaults={}
                     )
 
                     # Create license status- BUT IT'S NOT ACTIVE UNTIL PAYMENT IS PROCESSED
-                    license_status = LicenseStatus.objects.create(
+                    license_status, _ = LicenseStatus.objects.update_or_create(
                         license=license_obj,
-                        license_status_option='Pending',
-                        license_status_date=timezone.now(),
+                        defaults={
+                            "license_status_option":"Pending",
+                            "license_status_date": timezone.now(),
+                        }
                     )
                     
                     created_licenses.append({
