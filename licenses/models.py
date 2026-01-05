@@ -172,7 +172,7 @@ class LicenseStatus(models.Model):
     '''
     license_status_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
                                     help_text="Unique identifier for the license status.")
-    license_status_option = models.CharField(max_length=255, choices=[('Active', 'Active'), ('Expired', 'Expired'), ('Cancelled', 'Cancelled')],
+    license_status_option = models.CharField(max_length=255, choices=[('Active', 'Active'), ('Expired', 'Expired'), ('Cancelled', 'Cancelled'), ('Pending', 'Pending')],
                             help_text="The type of license status (e.g., 'Active', 'Expired', 'Cancelled').")
     license_status_date = models.DateTimeField(null=False, 
                             help_text="The date the license status was created.")

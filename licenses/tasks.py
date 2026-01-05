@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from licenses.models import License
+from licenses.models import License, LicenseStatus
 from licenses.services import (
     generate_license_agreement,
     build_download_urls_from_base,
@@ -43,6 +43,14 @@ def fulfill_order_licenses(self, order_id: str) -> dict:
 
         if not licenses:
             return {"status": "no_licenses", "order_id": order_id}
+        else:
+    # Update all license statuses in one query
+            LicenseStatus.objects.filter(
+                license__in=licenses
+            ).update(
+                license_status_option='Active',
+                license_status_date=timezone.now()
+            )
 
         # If everything already emailed, do nothing (idempotency)
         if all(l.license_email_sent_at is not None for l in licenses):

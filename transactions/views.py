@@ -264,10 +264,10 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         licensee=licensee, #from the created licensee above
                     )
 
-                    # Create license status
+                    # Create license status- BUT IT'S NOT ACTIVE UNTIL PAYMENT IS PROCESSED
                     license_status = LicenseStatus.objects.create(
                         license=license_obj,
-                        license_status_option='Active',
+                        license_status_option='Pending',
                         license_status_date=timezone.now(),
                     )
                     
