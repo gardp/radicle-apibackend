@@ -18,6 +18,11 @@ from transactions.models import Order, OrderItem, Payment, PaymentStatus, Receip
 import stripe
 from decimal import Decimal
 from datetime import datetime
+from licenses.tasks import fulfill_order_licenses
+from licenses.services import get_or_create_license_zip
+from django.urls import reverse
+
+
 class DebugLoggingMixin:
     """
     A mixin that provides simple print-based logging for DRF ViewSet actions.
@@ -116,17 +121,17 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         
         # IDEMPOTENCY: Check if order already exists
         existing_order = Order.objects.filter(reference_number=reference_number).first()
-        if existing_order:
-            return Response(
-                {
-                    "message": "Order already exists with this reference number.",
-                    "order_id": str(existing_order.order_id),
-                    "reference_number": existing_order.reference_number,
-                    "status": existing_order.status,
-                    "created_at": existing_order.created_at,
-                },
-                status=status.HTTP_200_OK
-            )
+        # if existing_order:
+        #     return Response(
+        #         {
+        #             "message": "Order already exists with this reference number.",
+        #             "order_id": str(existing_order.order_id),
+        #             "reference_number": existing_order.reference_number,
+        #             "status": existing_order.status,
+        #             "created_date": existing_order.created_date,
+        #         },
+        #         status=status.HTTP_200_OK
+        #     )
         
         # Validate required sections
         required_sections = ["licenseeContact", "musicProfessional", "buyerContact", "mailingRegistrationAddress", "billingAddress", "items"]
@@ -151,9 +156,9 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 licensee_contact_data = data["licenseeContact"]
                 licensee_contact, _ = Contact.objects.update_or_create(
                     email=licensee_contact_data["email"],
+                    first_name=licensee_contact_data.get("first_name"),
+                    last_name=licensee_contact_data.get("last_name"),
                     defaults={
-                        "first_name" : licensee_contact_data.get("first_name"),
-                        "last_name " : licensee_contact_data.get("last_name"),
                         "sudo_name" : licensee_contact_data.get("sudo_name"),
                         "company_name" : licensee_contact_data.get("company_name"),
                         "phone_number" : licensee_contact_data.get("phone"),
@@ -169,7 +174,7 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     contact=licensee_contact,
                     defaults={
                         "ref_code": music_professional_data.get("ref_code"),
-                        "proaffiliation": music_professional_data.get("proaffiliation"),
+                        "pro_affiliation": music_professional_data.get("pro_affiliation"),
                         "ipi_number": music_professional_data.get("ipi_number"),
                     }
                 )
@@ -211,9 +216,9 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 buyer_contact_data = data["buyerContact"]
                 buyer_contact, _ = Contact.objects.update_or_create(
                     email=buyer_contact_data["email"],
+                    first_name=buyer_contact_data.get("first_name"),
+                    last_name=buyer_contact_data.get("last_name"),
                     defaults={
-                        "first_name": buyer_contact_data.get("first_name"),
-                        "last_name": buyer_contact_data.get("last_name"),
                         "sudo_name": buyer_contact_data.get("sudo_name"),
                         "company_name": buyer_contact_data.get("company_name"),
                         "phone_number": buyer_contact_data.get("phone"),
@@ -310,10 +315,10 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         track_license_option=track_license_option,
                         order_item=order_item,
                         defaults={
-                            "license_agreement_file": track_license_option.license_type.license_agreement_file,
                             "created_date": timezone.now(),
                         }
-                    ) 
+                    )
+                    print(f"License obj created: {license_obj}") 
                     #TODO: Automate expiration date
                     
                     # ****LICENSEHOLDING****
@@ -339,18 +344,19 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                         "track_id": str(track.track_id),
                         "track_title": track.title,
                         "license_type": track_license_option.license_type.license_type_name,
-                        "download_url": license_obj.license_agreement_file.url if license_obj.license_agreement_file else None,
+                        "status": "Pending Payment",
                     })
+                    
                 holdings.append({
-                    "licensee_id": str(licensee.licensee_id),
+                    # "licensee_id": str(licensee.licensee_id), -  prob not safe to include
                     "licensee_name": f"{licensee.music_professional.contact.first_name} {licensee.music_professional.contact.last_name}".strip(),
                     "licensee_email": licensee.music_professional.contact.email,
-                    "transaction_id": str(order.order_id),
+                    # "transaction_id": str(order.order_id), - prob not safe to include
                     "reference_number": order.reference_number ,
-                    "created_at": order.created_at,
-                    "buyer_id": str(buyer.buyer_id),
-                    "buyer_name": f"{buyer.contact.first_name} {buyer.contact.last_name}".strip(),
-                    "buyer_email": buyer.contact.email,
+                    # "created_date": order.created_date, - incongruent...that would be for license
+                    # "buyer_id": str(buyer.buyer_id), - not safe or needed
+                    # "buyer_name": f"{buyer.contact.first_name} {buyer.contact.last_name}".strip(),
+                    # "buyer_email": buyer.contact.email, - not needed as the stripe and paypal are taking care of it
                     "amount": str(order.total_amount),
                     "status": order.status,
                     "licenses": created_licenses
@@ -366,16 +372,15 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                     "subtotal": str(order.subtotal),
                     "tax_rate": str(order.tax_rate),
                     "tax_amount": str(order.tax_amount),
-                    "created_at": order.created_at,
-                    "buyer": {
-                        "buyer_id": str(buyer.buyer_id),
-                        "buyer_name": f"{buyer.contact.first_name} {buyer.contact.last_name}".strip(),
-                        "buyer_email": buyer.contact.email
-                    },
+                    "created_date": order.created_date,
+                    # "buyer": { uncessary to include since stripe and paypal take care of it
+                    #     "buyer_id": str(buyer.buyer_id),
+                    #     "buyer_name": f"{buyer.contact.first_name} {buyer.contact.last_name}".strip(),
+                    #     "buyer_email": buyer.contact.email
+                    # },
                     "license_holdings": holdings,
 
-
-                    "message": "Order completed successfully. Licenses created and ready for download."
+                    "message": "Order created successfully. Payment processing required before download access."
                 }, status=status.HTTP_201_CREATED)
             print("Order Response: ", response.data)
         except ValueError as e:
@@ -388,7 +393,65 @@ class OrderViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 {"detail": f"Checkout failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    #This route gets the licenses and track zip files for the front end on order confirmation
+    @action(detail=True, methods=['get'])
+    def get_licenses_and_tracks(self, request, reference_number=None):
+        """
+        Get licenses and tracks for an order - only available after payment is completed.
+        Treat your get_licenses 403 (“Payment not completed…”) as “not ready yet”
+        Show a “Finalizing your order…” state
+        Poll every ~1-2 seconds for a short period (or poll an order status endpoint), until it becomes COMPLETED and returns licenses
+        """
+        try:
+            order = Order.objects.get(reference_number=reference_number)
+            print(f"PROVIDER PAYMENT ID from PAYMENT FOR ORDER for License: {order.payments.first().provider_payment_id}")
+            print(f"ORDER STATUS IN GETLICENSE: {order.status}")
+            # Security check: only allow access if payment is completed
+            if order.status != Order.OrderStatus.COMPLETED:
+                print(f"Payment not completed. Licenses not available yet. Order status: {order.status}")
+                return Response(
+                    {"error": "Payment not completed. Licenses not available yet."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
+            # Get all licenses for this order
+            licenses = []
+            for order_item in order.order_items.all():
+                for license_obj in order_item.licenses.all():
+                    # Only include download_url if license status is Active
+                    download_url = None
+                    if hasattr(license_obj, 'license_status') and license_obj.license_status.filter(license_status_option='Active').exists():
+                        # license_download_url = license_obj.license_agreement_file.url if license_obj.license_agreement_file else None,
+                        # track_download_url= license_obj.track_license_option.track_storage_file.file_path.url,
+                        track_description = license_obj.track_license_option.track_storage_file.description,
+                        track_file_format = license_obj.track_license_option.track_storage_file.file_format.name,
+                        ld = get_or_create_license_zip(license_obj)  # 96h TTL
+                        zip_path = reverse("download-assets", args=[license_obj.license_id, ld.token])
+                        zip_url = request.build_absolute_uri(zip_path) #This is important to create a short lived url
+                    licenses.append({
+                        "license_id": str(license_obj.license_id),
+                        "track_id": str(license_obj.track_license_option.track.track_id),
+                        "track_title": license_obj.track_license_option.track.title,
+                        "license_type": license_obj.track_license_option.license_type.license_type_name,
+                        "status": "Active",  # We know it's active because of the check above
+                        "created_date": license_obj.created_date,
+                        "track_description": track_description,
+                        "track_file_format": track_file_format,
+                        "zip_download_url": zip_url,
+                    })
+
+            return Response({
+                "order_reference_number": str(order.reference_number),
+                "status": order.status,
+                "licenses": licenses
+            })
+        
+        except Order.DoesNotExist:
+            return Response(
+                {"error": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 class OrderItemViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
     """
@@ -409,7 +472,7 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def create_payment_intent(self, request):
         data = request.data
-        reference_number = request.headers.get('Idempotency-Key')
+        reference_number = request.headers.get('Idempotency-Key') # different reference number for payment as oppose to order
         print("reference_number", reference_number)
         print("payment intent data", data)
     
@@ -434,7 +497,8 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 )
                 return Response({
                     'client_secret': client_secret,
-                    'stripe_intent_id': payment_intent.provider_payment_id,
+                    #IMPORTANT: after webhook is excuted, stripe_intent_id comes back as field "id". So search as field "id"in payment
+                    'stripe_intent_id': payment_intent.provider_payment_id, 
                     'publishable_key': settings.STRIPE_PUBLISHABLE_KEY
                 })
             
@@ -489,6 +553,19 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 order.status = Order.OrderStatus.COMPLETED
                 order.save()
                 print("Order status updated- now fulfilling order licenses")
+
+                # Make the license statuses of all the licenses active
+                for order_item in order.order_items.all():
+                    for license_obj in order_item.licenses.all():
+                        updated = license_obj.license_status.filter(
+                        license_status_option='Pending'
+                        ).update(
+                        license_status_option='Active',
+                        license_status_date=timezone.now()
+                        )
+                        if updated == 0 and not license_obj.license_status.filter(license_status_option='Active').exists():
+                            license_obj.license_status.create(license_status_option='Active')
+                
                 # Fulfill order licenses after transaction commits asynchronously using Celery
                 transaction.on_commit(lambda: fulfill_order_licenses.delay(str(order.order_id)))
         
@@ -526,7 +603,7 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
         # Handle specific event types
         if event['type'] == 'payment_intent.succeeded':
             payment_intent_data = event['data']['object']
-            
+            print(f"PAYMENT INTENT DATA ID: {payment_intent_data['id']}")
             try:
                 payment = Payment.objects.get(
                     provider='stripe',
@@ -536,10 +613,25 @@ class PaymentViewSet(DebugLoggingMixin, viewsets.ModelViewSet):
                 with transaction.atomic():
                     payment.status = PaymentStatus.SUCCESS
                     payment.save()
-                    
+                    print(f"Payment PROVIDER PAYMENT ID: {payment.provider_payment_id}")
+
                     order = payment.order
                     order.status = Order.OrderStatus.COMPLETED
                     order.save()
+                    print(f"Order status updated to COMPLETED: {order.status}")
+
+                    for order_item in order.order_items.all():
+                        for license_obj in order_item.licenses.all():
+                            updated = license_obj.license_status.filter(
+                            license_status_option='Pending'
+                            ).update(
+                            license_status_option='Active',
+                            license_status_date=timezone.now()
+                            )
+                            if updated == 0 and not license_obj.license_status.filter(license_status_option='Active').exists():
+                                license_obj.license_status.create(license_status_option='Active')
+                
+                    
                     #******* Fulfill STRIPE order licenses after transaction commits asynchronously using Celery    
                     # transaction.on_commit(lambda: __import__("licenses.tasks").tasks.fulfill_order_licenses.delay(str(order.order_id)))
                     transaction.on_commit(lambda: fulfill_order_licenses.delay(str(order.order_id)))

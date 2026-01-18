@@ -35,7 +35,7 @@ class EmailService:
     
     @staticmethod
     def send_transactional_email(subject, message=None, recipient_list=None, html_message=None, 
-                               template_name=None, context=None, attachments=None):
+                               template_name=None, context=None, attachments=None, reply_to=None):
         """
         Send transactional emails (license agreements, receipts, etc.).
         Uses hybrid backend for reliability.
@@ -50,6 +50,7 @@ class EmailService:
             attachments (list): List of attachments. Each item can be:
                 - A tuple (filename, content, mimetype)
                 - An EmailAttachment object
+            reply_to (list): List of reply-to emails
         """
         from django.template.loader import render_to_string
         from django.core.mail import EmailMultiAlternatives
@@ -77,7 +78,8 @@ class EmailService:
             subject=subject,
             body=message or "",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=recipient_list
+            to=recipient_list,
+            reply_to=reply_to or []
         )
         
         # Attach HTML alternative

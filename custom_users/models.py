@@ -39,7 +39,7 @@ class UserProfile(models.Model):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username}'s Profile"
+        return f"{self.user}'s Profile"
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)

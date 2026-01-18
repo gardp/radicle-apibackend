@@ -111,7 +111,7 @@ class FileFormat(models.Model):
     active = models.BooleanField(default=True, help_text="Whether this format is currently supported.")
 
     # --- Meta info ---
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -140,11 +140,11 @@ class TrackStorageFile(models.Model):
                                   help_text="The bit rate of the audio file of the song (in kbps).")
     file_size = models.BigIntegerField(blank=True, null=True,
                                   help_text="The file size of the audio file of the song (in bytes).")
-    created_at = models.DateTimeField(auto_now_add=True,
+    created_date = models.DateTimeField(auto_now_add=True,
                                      help_text="The date the file was created/uploaded.")
 
     def __str__(self):
-        return str(self.track_storage_file_id) + " - " + str(self.created_at)
+        return str(self.track_storage_file_id) + " - " + str(self.created_date)
 
 class Library(models.Model):
     """
@@ -186,7 +186,7 @@ class Contributor(models.Model):
                                  help_text="Unique identifier for the contributor.")
     music_professional = models.ForeignKey(MusicProfessional, on_delete=models.CASCADE,
                                           related_name='contributor')
-    role = models.CharField(max_length=255,choices=ROLE_CHOICES,
+    role = models.CharField(max_length=255,choices=ROLE_CHOICES, default='Various',
                             help_text="The role of the contributor (e.g., 'Composer', 'Lyricist', 'Producer', Songwriter, Engineer, Singer, Performer ).")
     note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the contributor.")
@@ -200,7 +200,7 @@ class SocialMediaLink(models.Model):
     platform = models.CharField(max_length=50, blank=True, null=True)  # 'Instagram', 'Twitter', etc.
     music_professional = models.ForeignKey(MusicProfessional, on_delete=models.CASCADE, related_name='social_media_links')
     def __str__(self):
-        return str(self.social_media_id) + " " + self.platform
+        return str(self.social_media_id)
 
 # Many to many relationship between Contributor and Track
 class Contribution(models.Model):
@@ -226,7 +226,7 @@ class Contribution(models.Model):
     contribution_note = models.TextField(blank=True, null=True,
                                         help_text="Additional notes or comments about the contribution.")
     def __str__(self):
-        return str(self.contribution_id) + " " + str(self.track.title)
+        return str(self.contribution_id) + " " + str(self.contribution_date.strftime('%Y-%m-%d'))
 
 class Publisher(models.Model):
     """A publisher of a track"""
@@ -244,7 +244,7 @@ class Publisher(models.Model):
                             help_text="Additional notes or comments about the publisher.")
 
     def __str__(self):
-        return str(self.publisher_id) + " " + str(self.contact.first_name) + " " + str(self.contact.last_name)
+        return str(self.publisher_id)
 
 class Publishing(models.Model):
     """A publishing of a track as a joining table for many to many relationship between Track and Publisher"""
@@ -257,7 +257,7 @@ class Publishing(models.Model):
     note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the publishing.")
     def __str__(self):  
-        return str(self.publishing_id) + " " + str(self.track.title) + " " + str(self.publishing_date.strftime('%Y-%m-%d'))
+        return str(self.publishing_id) + " " + str(self.track) + " " + str(self.publishing_date.strftime('%Y-%m-%d'))
 
 
 # # --- Main Song Model ---

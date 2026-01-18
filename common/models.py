@@ -20,15 +20,15 @@ class Contact(models.Model):
     # Fields for an individual
     first_name = models.CharField(max_length=255, blank=True, help_text="The first name of the contact.")
     last_name = models.CharField(max_length=255, blank=True, help_text="The last name of the contact.")
-    sudo_name = models.CharField(max_length=255, blank=True, help_text="The artist name, alias, or stage name of the contact.")
+    sudo_name = models.CharField(max_length=255, blank=True, null=True, help_text="The artist name, alias, or stage name of the contact.")
     
     # Field for a company or organization name
-    company_name = models.CharField(max_length=255, blank=True, help_text="The name of the company or organization.")
-    registration_number = models.CharField(max_length=255, blank=True, help_text="The registration number of the company or organization.")
+    company_name = models.CharField(max_length=255, blank=True, null=True, help_text="The name of the company or organization.")
+    registration_number = models.CharField(max_length=255, blank=True, null=True, help_text="The registration number of the company or organization.")
     
 
     email = models.EmailField(blank=False)
-    phone_number = models.CharField(max_length=20, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     def clean(self):  # ← Add here, inside the class
         """Custom validation: company_name required if contact_type is COMPANY"""
@@ -40,7 +40,7 @@ class Contact(models.Model):
 
     def __str__(self):
         if self.contact_type == self.ContactType.INDIVIDUAL:
-            return f"{self.first_name} {self.last_name} {self.sudo_name}".strip()
+            return f"{self.first_name or ''} {self.email} {self.sudo_name or ''}".strip()
         return self.company_name
 
 

@@ -5,7 +5,9 @@ from django.urls import reverse
 from urllib.parse import urljoin
 from django.conf import settings
 from django.core.mail import EmailMessage
-from .models import License, LicenseHolding
+from .models import License, LicenseHolding, LicenseDownload
+from django.core.files.storage import default_storage
+from music.models import TrackStorageFile
 import io
 # try:
 #     from weasyprint import HTML
@@ -109,11 +111,19 @@ def build_download_urls(request, license_obj: License) -> tuple[str, str]:
 # Add URL building that works in Celery (no request)
 def build_download_urls_from_base(base_url: str, license_obj: License) -> tuple[str, str]:
     license_id = str(license_obj.license_id)
+
+    # License PDF (unchanged)
     license_path = reverse("download-license", args=[license_id])
-    track_path = reverse("download-track", args=[license_id])
     license_url = urljoin(base_url.rstrip("/") + "/", license_path.lstrip("/"))
-    track_url = urljoin(base_url.rstrip("/") + "/", track_path.lstrip("/"))
-    return license_url, track_url
+
+    # Assets ZIP (single file or stems) via tokenized URL
+    ld = get_or_create_license_zip(license_obj)  # ensures ZIP exists and 72h token is set
+    asset_path = reverse("download-assets", args=[license_id, ld.token])
+    asset_url = urljoin(base_url.rstrip("/") + "/", asset_path.lstrip("/"))
+
+    # Keep return signature the same
+    return license_url, asset_url
+
 
 # Send an email to the buyer with the license PDF attached and links to download the track and license with celery
 # TODO send email with download url 
@@ -160,8 +170,71 @@ def send_license_email(
             'order_reference': order_reference,
             'licenses': license_items
         },
-        attachments=attachments
+        attachments=attachments,
+        reply_to=[settings.DEFAULT_FROM_EMAIL]
     )
+
+# get or generate a track zip file for either single tracks or stems that will be sent to user via email or on the website
+def get_or_create_license_zip(license_obj):
+    from django.core.files.base import File
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+    from django.utils.text import slugify
+    import secrets, zipfile, os, tempfile
+
+    existing = getattr(license_obj, "license_download", None)
+    if existing and existing.expires_at > timezone.now() and existing.zip_file:
+        return existing
+
+    track = license_obj.track_license_option.track
+    tsf = license_obj.track_license_option.track_storage_file
+    fmt = tsf.file_format.name
+
+    if fmt == "Stems":
+        files_qs = TrackStorageFile.objects.filter(
+            track_license_options__track=track,
+            file_format__name="Stems",
+        ).distinct()
+        files = [(f.file_path.name, os.path.basename(f.file_path.name)) for f in files_qs]
+        label = "stems"
+    else:
+        files = [(tsf.file_path.name, os.path.basename(tsf.file_path.name))]
+        label = fmt.lower()
+    # add license agreement to zip if it exists
+    if license_obj.license_agreement_file:
+        files.append((license_obj.license_agreement_file.name, "LICENSE.pdf"))
+    title = getattr(track, "title", str(track.track_id))
+    zip_name = f"{slugify(title)}_{label}_{license_obj.license_id}.zip"
+    storage_path = f"license_zips/{zip_name}"
+
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp_path = tmp.name
+    try:
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for storage_key, arcname in files:
+                with default_storage.open(storage_key, "rb") as f:
+                    zf.writestr(arcname, f.read())
+        with open(tmp_path, "rb") as f:
+            saved_name = default_storage.save(storage_path, File(f))
+    finally:
+        os.remove(tmp_path)
+
+    token = secrets.token_urlsafe(32)
+    expires_at = timezone.now() + timezone.timedelta(hours=settings.LICENSE_ZIP_TTL_HOURS)
+
+    obj, _ = LicenseDownload.objects.update_or_create(
+        license=license_obj,
+        defaults={"zip_file": saved_name, "token": token, "expires_at": expires_at},
+    )
+    return obj
+
+
+
+
+
+
+
+
 
 
 # THIS IS UNECESSARY FOR NOW AS PAYPAL AND STRIPE AS A DEFAULT PAYMENT EMAIL TO SEND RECEIPT

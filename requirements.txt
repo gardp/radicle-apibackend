@@ -31,6 +31,10 @@ paypalrestsdk
 sendgrid==6.11.0
 xhtml2pdf
 django-summernote==0.8.20.0
+django-cleanup~=8.1
+django-celery-beat~=2.6
+django-storages[boto3]~=1.14
+zipstream-ng~=1.6
 
 
 

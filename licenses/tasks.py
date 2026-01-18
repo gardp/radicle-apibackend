@@ -2,6 +2,7 @@ from celery import shared_task
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from licenses.services import get_or_create_license_zip
 
 from licenses.models import License, LicenseStatus
 from licenses.services import (
@@ -75,6 +76,7 @@ def fulfill_order_licenses(self, order_id: str) -> dict:
             if not lic.license_agreement_file:
                 # best effort; no-op if WeasyPrint not available
                 generate_license_agreement(lic)
+                get_or_create_license_zip(lic) #create zip file for the license
     # Send one email
     send_license_email(
         to_email=to_email,
@@ -90,3 +92,14 @@ def fulfill_order_licenses(self, order_id: str) -> dict:
             lic.save(update_fields=["license_email_sent_at"])
 
     return {"status": "sent", "order_id": order_id, "count": len(licenses), "to_email": to_email}
+
+# licenses/tasks.py
+# Add a task to delete expired rows/files (works with django-cleanup):
+@shared_task
+def purge_expired_license_downloads():
+    from django.utils import timezone
+    from .models import LicenseDownload
+    qs = LicenseDownload.objects.filter(expires_at__lte=timezone.now())
+    deleted = qs.count()
+    qs.delete()  # django-cleanup removes files
+    return {"deleted": deleted}

@@ -15,3 +15,11 @@ app = Celery("core")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
+# core/celery.py or wherever you configure Celery
+from celery.schedules import crontab
+app.conf.beat_schedule = {
+    "purge-expired-license-downloads": {
+        "task": "licenses.tasks.purge_expired_license_downloads",
+        "schedule": crontab(minute=0, hour="*/6"),
+    }
+}

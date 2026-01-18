@@ -5,7 +5,7 @@ from .tasks import send_newsletter_task
 
 @admin.register(NewsletterCategory)
 class NewsletterCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'is_default', 'is_active', 'created_at')
+    list_display = ('name', 'slug', 'is_default', 'is_active', 'created_date')
     prepopulated_fields = {'slug': ('name',)}
     list_filter = ('is_active', 'is_default')
     search_fields = ('name', 'description')
@@ -25,8 +25,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(Newsletter)
 class NewsletterAdmin(SummernoteModelAdmin):
-    list_display = ('subject', 'status', 'created_at', 'sent_at')
-    list_filter = ('status', 'created_at')
+    list_display = ('subject', 'status', 'created_date', 'sent_at')
+    list_filter = ('status', 'created_date')
     search_fields = ('subject',)
     summernote_fields = ('content',)
     actions = ['send_newsletter']

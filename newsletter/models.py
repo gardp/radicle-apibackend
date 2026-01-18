@@ -15,7 +15,7 @@ class NewsletterCategory(models.Model):
         help_text="If True, new subscribers are automatically subscribed to this category."
     )
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name_plural = "Newsletter Categories"
@@ -101,7 +101,7 @@ class Subscription(models.Model):
         ordering = ['-subscribed_at']
 
     def __str__(self):
-        return f"{self.subscriber.email} -> {self.category.name}"
+        return f"{self.category} ->{self.is_active} + " + " " + f"{self.source}"
     
     def unsubscribe_all(self):
         """Unsubscribe from all categories."""
@@ -139,12 +139,12 @@ class Newsletter(models.Model):
     )
     
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_date']
 
     def __str__(self):
         return self.subject

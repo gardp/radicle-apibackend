@@ -17,7 +17,7 @@ class Buyer(models.Model):
     # Core contact info
     contact = models.OneToOneField('common.Contact', on_delete=models.CASCADE, related_name='buyer')
     def __str__(self):
-        return self.contact.first_name + " " + self.contact.last_name
+        return str(self.contact)
 
 
 class Order(models.Model):
@@ -36,7 +36,7 @@ class Order(models.Model):
     
     status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.PENDING)
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # tax fields
@@ -61,14 +61,14 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Order {self.order_id} by {self.buyer.buyer_id}"
+        return f"Order {self.order_id} + {self.total_amount}"
 
 
 
 class OrderItem(models.Model):
     """A generic order item that can reprensent a track or a merch item"""
     order_item_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
     
     # Generic foreign key to the product being purchased (e.g., a TrackLicenseOption, a Merch item)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -81,7 +81,7 @@ class OrderItem(models.Model):
     currency = models.CharField(max_length=3, default="usd")
 
     def __str__(self):
-        return f"{self.quantity}x of {self.purchased_item} in Order {self.order.order_id}"
+        return f"{self.quantity}x of {self.purchased_item} in Order {self.order}"
 
 # transactions/models.py (continued)
 class PaymentStatus(models.TextChoices): #it's reused in Receipt
@@ -102,11 +102,11 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2) #it's the total payment amount of the order
     currency = models.CharField(max_length=3, default="usd")
     status = models.CharField(max_length=10, choices=PaymentStatus.choices)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Payment {self. transaction_id} for Order {self.order.order_id}"
+        return f"Payment {self.payment_id} for Order {self.order}"
 
 #### Remove receipt and add the receipt file to the payment model
 class Receipt(models.Model):
@@ -116,4 +116,4 @@ class Receipt(models.Model):
     receipt_file = models.FileField(upload_to='receipts/', blank=True, null=True)
  
     def __str__(self):
-        return f"Receipt {self.receipt_id} for Payment {self.payment.payment_id}"
+        return f"Receipt {self.receipt_id} for Payment {self.payment}"

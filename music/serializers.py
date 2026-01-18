@@ -64,7 +64,7 @@ class FileFormatSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TrackStorageFileSerializer(serializers.ModelSerializer):
-    file_format = FileFormatSerializer(read_only=True)  # Nest the format
+    file_format = FileFormatSerializer(read_only=True)  # Nest the format to also make the serializer send it in the frontend
     class Meta:
         model = TrackStorageFile
         fields = '__all__'

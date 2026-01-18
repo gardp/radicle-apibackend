@@ -1,7 +1,7 @@
 # music/urls.py (Example)
 from django.urls import path
 from rest_framework import routers
-from .views import CopyrightViewSet, CopyrightHoldingViewSet, CopyrightStatusViewSet, LicenseViewSet, LicenseHoldingViewSet, LicenseStatusViewSet, LicenseTypeViewSet, LicenseeViewSet, TrackLicenseOptionsViewSet, download_license_agreement, download_track
+from .views import CopyrightViewSet, CopyrightHoldingViewSet, CopyrightStatusViewSet, LicenseViewSet, LicenseHoldingViewSet, LicenseStatusViewSet, LicenseTypeViewSet, LicenseeViewSet, TrackLicenseOptionsViewSet, download_license_agreement, download_track, download_assets
 from django.urls import include
 
 router = routers.DefaultRouter()
@@ -26,6 +26,12 @@ urlpatterns = [
         "download/track/<uuid:license_id>/",
         download_track,
         name="download-track",
+    ),
+    #This route is used to download the zip file that contains the track and license agreement- as opposed to the download_license_agreement and download_track endpoints that are used to download the license agreement and track separately/ no zip file
+    path(
+        "download/assets/<uuid:license_id>/<str:token>/",
+        download_assets,
+        name="download-assets",
     ),
 ]
 

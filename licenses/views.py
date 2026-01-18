@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import generics 
-from .models import Copyright, CopyrightHolding, CopyrightStatus, License, Licensee, LicenseHolding, LicenseStatus, License_type, TrackLicenseOptions
+from .models import Copyright, CopyrightHolding, CopyrightStatus, License, Licensee, LicenseHolding, LicenseStatus, License_type, TrackLicenseOptions, LicenseDownload
 from .serializers import CopyrightSerializer, CopyrightHoldingSerializer, CopyrightStatusSerializer, LicenseSerializer, LicenseeSerializer, LicenseHoldingSerializer, LicenseStatusSerializer, LicenseTypeSerializer, TrackLicenseOptionsSerializer
 from rest_framework import viewsets 
 from rest_framework import permissions  
@@ -12,6 +12,11 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from .models import License
 from django.http import FileResponse
+from django.utils import timezone
+import os
+from django.core.files.storage import default_storage
+from django.conf import settings
+from django.shortcuts import redirect
 
 # Create your views here.
 class CopyrightViewSet(viewsets.ModelViewSet):
@@ -189,4 +194,21 @@ def download_track(request, license_id):
     )
 
 
-    
+# This endpoint is used to download the zip file that contains the track and license agreement- as opposed to the download_license_agreement and download_track endpoints that are used to download the license agreement and track separately/ no zip file
+#They are save in LicenseDownload with a reference to license...that's what make them reachable
+def download_assets(request, license_id, token):
+    ld = get_object_or_404(LicenseDownload, license_id=license_id, token=token)
+    if ld.expires_at <= timezone.now():
+        raise Http404("Link expired")
+    if not ld.zip_file or not default_storage.exists(ld.zip_file.name):
+        raise Http404("Asset not found")
+
+    # Preferred for DO Spaces/S3 (private objects):
+    try:
+        url = default_storage.url(ld.zip_file.name, expire=getattr(settings, "S3_PRESIGNED_TTL_SECONDS", 900))
+        return redirect(url)
+    except Exception:
+        # Fallback for local storage or if presign fails
+        name = os.path.basename(ld.zip_file.name)
+        f = ld.zip_file.open("rb")
+        return FileResponse(f, as_attachment=True, filename=name)

@@ -13,6 +13,7 @@ router.register(r'content-type-mappings', ContentTypeMappingViewSet, basename='c
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
     path('', include(router.urls)),
+    path('orders/<str:reference_number>/licenses/', OrderViewSet.as_view({'get': 'get_licenses_and_tracks'}), name='order-licenses')
 ]
 
 # GET	/buyers/	List all buyers	buyers-list

@@ -28,6 +28,13 @@ DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 SENDGRID_API_KEY = config("SENDGRID_API_KEY", default="")
 SENDGRID_FROM_EMAIL = config("SENDGRID_FROM_EMAIL", default=EMAIL_HOST_USER)
 
+# Contact Us settings
+CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default="")
+RECAPTCHA_SECRET_KEY = config("RECAPTCHA_SECRET_KEY", default="")
+# Upload limits for 25MB attachments (with margin)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30MB
+
 # Dynamic Email Backend Selection
 EMAIL_BACKEND_TYPE = config("EMAIL_BACKEND_TYPE", default="smtp")
 
@@ -63,7 +70,11 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json" # default
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
-
+# ZIP/URL validity
+LICENSE_ZIP_TTL_HOURS = 96  # you set 96; make it configurable
+S3_PRESIGNED_TTL_SECONDS = 900  # ~15 minutes for presigned redirects
+# Streaming threshold for stems (sum sizes)
+STEMS_STREAM_THRESHOLD_MB = 200  # stream if stems bundle is larger than this
 ALLOWED_HOSTS = []
 
 # Media files (user-uploaded files)
@@ -86,14 +97,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     # Local apps
-    'api.apps.ApiConfig',
     'custom_users.apps.CustomUsersConfig',
     'music.apps.MusicConfig',
     'transactions.apps.TransactionsConfig',
     'licenses.apps.LicensesConfig',
     'common.apps.CommonConfig',
     'newsletter.apps.NewsletterConfig',
+    'contact.apps.ContactConfig',
+    # django summernote for rich html text for the emails and contracts
     'django_summernote',
+    'django_cleanup.apps.CleanupConfig'
 ]
 
 MIDDLEWARE = [
@@ -167,6 +180,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media' # This will be unused if using Spaces, but it's the base media directory when saving in admin panels
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", # React dev server
+    "https://radiclesound.com",  # Production frontend
+    "https://www.radiclesound.com",  # WWW variant
+
 ]
 
 # If you need to allow specific headers or methods beyond defaults

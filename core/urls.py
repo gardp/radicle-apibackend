@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/v1/', include('common.urls')),
     path('api/v1/', include('custom_users.urls')),
     path('api/v1/', include('newsletter.urls')),
+    path('api/v1/', include('contact.urls')),
     
 ]
 

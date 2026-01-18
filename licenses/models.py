@@ -21,7 +21,7 @@ class Copyright(models.Model):
     note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the copyright.")
     def __str__(self):
-        return str(self.copyright_type) + " - " + str(self.track.title)
+        return str(self.copyright_type) + " - " + (str(self.copyright_date.strftime('%Y-%m-%d')) if self.copyright_date else "")
 
 class CopyrightHolding(models.Model):
     """A copyright holding of a track as a join many to many relationship table between Copyright and MusicProfessional"""
@@ -31,12 +31,12 @@ class CopyrightHolding(models.Model):
                             help_text="The copyright record.")
     copyright_holder = models.ForeignKey(MusicProfessional, on_delete=models.CASCADE, related_name='copyright_holdings', blank=False, null=False,
                             help_text="The copyright holder.")
-    copyright_holder_split = models.IntegerField(null=False,
+    copyright_holder_split = models.IntegerField(null=False, default=100,
                             help_text="The percentage of the copyright holder's share of the copyright.")
     copyright_holding_note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the copyright holder.")
     def __str__(self):
-        return str(self.copyright_holder) + " - " + str(self.copyright.copyright_id) + " - " + str(self.copyright_holder_split) + " - " + str(self.copyright.copyright_type)
+        return str(self.copyright_holder) + " - " + str(self.copyright_holder_split)
 
 class CopyrightStatus(models.Model):
     """A copyright status of a track"""
@@ -51,7 +51,7 @@ class CopyrightStatus(models.Model):
     copyright_status_note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the copyright status.")
     def __str__(self):
-        return str(self.copyright_status_option) + " - " + str(self.copyright.copyright_id)    
+        return str(self.copyright_status_option) + " - " + str(self.copyright_status_date)    
 
 class License_type(models.Model):
     """A license type of a track that will be used in the licenseOption with the TrackStorageFile"""
@@ -103,7 +103,7 @@ class Licensee(models.Model):
     music_professional = models.ForeignKey(MusicProfessional, on_delete=models.CASCADE, related_name='licensees', null=True, blank=True,
                             help_text="The licensee.")
     role = models.CharField(max_length=255, null=True, blank=True,
-                            choices=ROLE_CHOICES,
+                            choices=ROLE_CHOICES, default='Various',
                             help_text="The role of the licensee (e.g., 'Composer', 'Lyricist', 'Producer', Songwriter, Engineer, Singer, Performer ).")
     note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the licensee.")
@@ -163,7 +163,7 @@ class LicenseHolding(models.Model):
     license_holding_note = models.TextField(blank=True, null=True,
                             help_text="Additional notes or comments about the license holding.")
     def __str__(self):
-        return str(self.license_holding_id) + " - " + str(self.license.license_id) + " - " + str(self.licensee) + " - " + str(self.licensee_split)
+        return str(self.license_holding_id) + " - " + str(self.licensee)
 
 # License status
 class LicenseStatus(models.Model):
@@ -174,7 +174,7 @@ class LicenseStatus(models.Model):
                                     help_text="Unique identifier for the license status.")
     license_status_option = models.CharField(max_length=255, choices=[('Active', 'Active'), ('Expired', 'Expired'), ('Cancelled', 'Cancelled'), ('Pending', 'Pending')],
                             help_text="The type of license status (e.g., 'Active', 'Expired', 'Cancelled').")
-    license_status_date = models.DateTimeField(null=False, 
+    license_status_date = models.DateTimeField(null=False, auto_now=True,
                             help_text="The date the license status was created.")
     license = models.ForeignKey(License, on_delete=models.CASCADE, related_name='license_status',
                             help_text="The license record.")
@@ -184,4 +184,8 @@ class LicenseStatus(models.Model):
         return str(self.license_status_id) + " - " + str(self.license_status_option) + " - " + str(self.license_status_date.strftime('%Y-%m-%d'))
 
 
-    
+class LicenseDownload(models.Model):
+    license = models.OneToOneField(License, on_delete=models.CASCADE, related_name='license_downloads')
+    token = models.CharField(max_length=255, unique=True)
+    expires_at = models.DateTimeField()
+    zip_file = models.FileField(upload_to='license_zips/', blank=True, null=True)
